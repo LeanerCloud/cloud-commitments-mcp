@@ -1,0 +1,50 @@
+# GoReleaser config for cmd/cudly-mcp (see README.md). This repo hosts a
+# single Go module dedicated to cudly-mcp -- there is nothing else in this
+# repo's release surface.
+version: 2
+
+project_name: cudly-mcp
+
+builds:
+  - id: cudly-mcp
+    main: ./cmd/cudly-mcp
+    binary: cudly-mcp
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X main.Version={{ .Version }}
+
+# formats: ["binary"] skips compression and uploads the raw per-platform
+# executables directly to the GitHub Release -- release.yml's mcpb job runs
+# in a separate job (and runner) from this one, so it fetches them back via
+# `gh release download` rather than reading dist/ directly.
+archives:
+  - id: cudly-mcp
+    ids: [cudly-mcp]
+    formats: [binary]
+    name_template: "cudly-mcp_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: "cudly-mcp_checksums.txt"
+  algorithm: sha256
+
+# Per-tag release notes: the default changelog would pull in every commit
+# since the last tag, which is fine now that this repo is scoped to
+# cudly-mcp alone -- kept disabled anyway since there is no changelog
+# convention established yet for this repo's tags.
+changelog:
+  disable: true
+
+release:
+  github:
+    owner: LeanerCloud
+    name: cloud-commitments-mcp
+  # release.yml also uploads the MCPB bundle(s) as extra release assets
+  # after this step runs; GoReleaser only produces the raw binaries here.
+  mode: append
