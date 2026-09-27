@@ -253,6 +253,13 @@ jobs:
              server.json > "$patched"
           mv "$patched" server.json
 
+      # cosign is not part of the documented ubuntu-latest toolset, so it
+      # must be installed explicitly rather than assumed present.
+      - name: Install cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        with:
+          cosign-release: "v3.0.6"
+
       # This job holds id-token: write (OIDC to the MCP Registry), so the
       # binary it execs must be verified, not just downloaded. This runner
       # is always ubuntu-latest (see runs-on above), so only the
