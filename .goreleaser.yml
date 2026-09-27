@@ -21,8 +21,9 @@ builds:
       - -s -w -X main.Version={{ .Version }}
 
 # formats: ["binary"] skips compression and uploads the raw per-platform
-# executables directly to the GitHub Release -- release.yml's MCPB pack step
-# reads them straight out of dist/ (no download/extract round trip needed).
+# executables directly to the GitHub Release -- release.yml's mcpb job runs
+# in a separate job (and runner) from this one, so it fetches them back via
+# `gh release download` rather than reading dist/ directly.
 archives:
   - id: cudly-mcp
     ids: [cudly-mcp]
