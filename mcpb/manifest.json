@@ -12,6 +12,9 @@
     "url": "https://github.com/LeanerCloud/cloud-commitments-mcp"
   },
   "license": "OSL-3.0",
+  "compatibility": {
+    "platforms": ["darwin", "linux"]
+  },
   "server": {
     "type": "binary",
     "entry_point": "server/linux-launch.sh",
