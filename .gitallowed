@@ -78,7 +78,16 @@
 ^scripts/setup-git-secrets\.sh:[0-9]+:git secrets --add 'mysq[l]://\[\^:\]\+:\[\^@\]\+@'                              # MySQL$
 
 # Truncated PEM fixtures used by scripts/test-git-secrets-allowlist.sh (and
-# by any test in this repo that needs a non-secret PEM-shaped string): a PEM
-# header followed by "\n..." is never a key body. Written without "BEGIN" so
-# this line itself does not trip the PEM detector.
-PRIVATE KEY-----\\n(MIIEvQIBADANBg)?\.\.\.
+
+# Truncated PEM placeholder used by scripts/test-git-secrets-allowlist.sh
+# (and by any fixture in this repo needing a non-secret PEM-shaped string):
+# a PEM header immediately followed by "\n..." (optionally with a short
+# base64 prefix) is never a real key body, so a line consisting of exactly
+# that shape is safe. Anchored two ways so it cannot become the #1972 hole
+# again: the header must be the whole quoted value (no room for a secret
+# spliced in before "-----BEGIN" or between "BEGIN" and "PRIVATE KEY-----"),
+# and the tail is pinned with $ to only the closing quote/comma this
+# repo's fixtures actually use (no room for a secret appended after "...").
+# One letter of "PRIVATE" is bracketed for the same self-scan reason the
+# block above explains -- do not tidy it back to a bare word.
+"-----BEGIN PRIVAT[E] KEY-----\\n(MIIEvQIBADANBg)?\.\.\.(\\n)?",?$
