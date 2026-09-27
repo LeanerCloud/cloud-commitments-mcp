@@ -1,12 +1,21 @@
 # CUDly MCP Server
 
-`cudly-mcp` exposes CUDly's reserved-capacity search and purchase tools (AWS EC2/RDS/ElastiCache/OpenSearch/Redshift/MemoryDB/Savings Plans, Azure VM Reservations, GCP Compute Engine CUDs) to any MCP client -- Claude Code, Claude Desktop, or another MCP-speaking agent -- as a local process. It is a thin wrapper around the same in-process Go packages (`pkg/provider`, `pkg/common`) the `ri-helper` CLI uses; it never shells out to `ri-helper`, and it is not deployed anywhere (see [Deployment model](#deployment-model)).
+`cudly-mcp` exposes CUDly's reserved-capacity search and purchase tools (AWS EC2/RDS/ElastiCache/OpenSearch/Redshift/MemoryDB/Savings Plans, Azure VM Reservations, GCP Compute Engine CUDs) to any MCP client -- Claude Code, Claude Desktop, or another MCP-speaking agent -- as a local process. It is a thin wrapper around the shared Go packages in [cloud-commitments-go](https://github.com/LeanerCloud/cloud-commitments-go); it never shells out to the CLI, and it is not deployed anywhere (see [Deployment model](#deployment-model)).
 
 Every purchase tool is dry-run by default (`dry_run=true`) and requires an explicit `confirm=true` alongside `dry_run=false` before it spends money. A real purchase additionally requires the operator to have started the server with `CUDLY_MCP_ENABLE_REAL_PURCHASES=1` -- unset by default, so a fresh install cannot spend money until the operator opts in. See [Safety model](#safety-model).
 
 ## Install
 
-From the repository root:
+Use Go 1.26.6, as declared by this module. The shared Go modules are published and pinned in `go.mod`, so this checkout builds on its own. From this checkout:
+
+```bash
+make build
+./bin/cudly-mcp
+```
+
+`make build` creates `bin/cudly-mcp` from `./cmd/cudly-mcp`.
+
+For local development, run the module directly or install the module's binary:
 
 ```bash
 go install ./cmd/cudly-mcp
@@ -14,13 +23,13 @@ go install ./cmd/cudly-mcp
 
 This installs the `cudly-mcp` binary to `$(go env GOBIN)` (or `$(go env GOPATH)/bin` if `GOBIN` is unset); make sure that directory is on your `PATH` so `cudly-mcp` resolves without a full path.
 
-Or run directly without a separate install step:
+Or run directly without installing a binary:
 
 ```bash
 go run ./cmd/cudly-mcp
 ```
 
-There is no separate module or release artifact for `cudly-mcp` yet -- install it from a checkout of this repository.
+This checkout has its own `go.mod` and no published release artifact. The shared Go modules are resolved from the versions pinned there.
 
 ## Configure credentials
 
@@ -62,11 +71,11 @@ cudly-mcp
 
 The server speaks MCP over stdio and logs diagnostics to stderr; it does not print anything to stdout other than protocol traffic, so it is safe to launch directly from an MCP client's process-spawning config (below) rather than through a wrapper script.
 
-By default, `cudly-mcp` cannot execute real purchases: `dry_run=false, confirm=true` calls are refused until you set `CUDLY_MCP_ENABLE_REAL_PURCHASES=1` in the environment the process launches with. Add it to the `env` block in [Register with an MCP client](#register-with-an-mcp-client) once you are ready to let this server spend money. See [Safety model](#safety-model) for the full rule.
+By default, `cudly-mcp` cannot execute real purchases: `dry_run=false, confirm=true` calls are refused until you set `CUDLY_MCP_ENABLE_REAL_PURCHASES=1` in the environment that launches the process. Add it to the `env` block in [Register with an MCP client](#register-with-an-mcp-client) once you are ready to let this server spend money. See [Safety model](#safety-model) for the full rule.
 
 ## Register with an MCP client
 
-Add an entry to your client's MCP server config. For Claude Code, this is `~/.claude/mcp.json`. If the client does not inherit your shell's `PATH`, use the absolute path `go install` reported: `$(go env GOBIN)/cudly-mcp` if `GOBIN` is set, otherwise `$(go env GOPATH)/bin/cudly-mcp` (`$(go env GOBIN)` expands to an empty string when `GOBIN` is unset, so that path alone is not a valid binary location):
+Add an entry to your client's MCP server config. For Claude Code, this is `~/.claude/mcp.json`. If you used `make build`, set `command` to the absolute path of `./bin/cudly-mcp`. If you used `go install`, use the absolute path it reported: `$(go env GOBIN)/cudly-mcp` if `GOBIN` is set, otherwise `$(go env GOPATH)/bin/cudly-mcp` (`$(go env GOBIN)` expands to an empty string when `GOBIN` is unset, so that path alone is not a valid binary location):
 
 ```json
 {
@@ -113,7 +122,7 @@ Every other provider's purchase tool (`cudly_aws_savingsplans_purchase`, `cudly_
 ## Safety model
 
 - `dry_run` defaults to `true` on every purchase tool. A dry-run call never contacts the cloud provider and never spends money -- it only validates your parameters. It reports pricing (`cost`/`on_demand_cost`/`estimated_savings`/`savings_percentage`) only when a real figure is genuinely known; those fields are omitted, not zeroed, when it isn't.
-- A real purchase requires **both** `dry_run=false` **and** `confirm=true`. `dry_run=false` with `confirm=false` (or vice versa) is refused with a structured error, not silently downgraded to a preview or silently ignored.
+- `dry_run=true` always previews, including when `confirm=true`. A real purchase requires **both** `dry_run=false` **and** `confirm=true`; `dry_run=false` with `confirm=false` is refused with a structured error, not silently downgraded to a preview.
 - A real purchase **also** requires the operator to have set `CUDLY_MCP_ENABLE_REAL_PURCHASES=1` (or `true`, case-insensitive) in the environment `cudly-mcp` was launched with. This is layered underneath `confirm`: `confirm` only proves the model asked to spend money, it does not prove the operator running this server wants it able to. The gate is unset (disabled) by default -- unset, empty, `0`, `false`, or any other value all disable real purchases -- so a fresh install cannot spend money until the operator explicitly opts in. When disabled, a `dry_run=false, confirm=true` call is refused before any provider or credential is touched, naming the flag to set. Dry runs are unaffected by this flag; they never spend regardless of its value.
 - A real purchase requires the **target account to be named**: `aws_profile` (AWS) or `azure_subscription_id` (Azure), either as the tool argument or via the matching environment variable the provider itself reads (`AWS_PROFILE`, `AZURE_SUBSCRIPTION_ID`). **GCP has no environment fallback, so `gcp_project_id` is required for a real CUD purchase.** That is deliberate: nothing in `providers/gcp` reads `GOOGLE_CLOUD_PROJECT` or `CLOUDSDK_CORE_PROJECT`, and with no project configured the provider falls back to the *first active project* in your `ListProjects` response -- an artifact of IAM visibility and API ordering rather than a project anyone chose, which is not a defensible default for spending money. Pointing the scope at an environment variable the provider ignores would be worse still: the idempotency token would name one project while the commitment landed in another. If neither is set, the real purchase is refused before any credential is touched, naming the argument to pass. **Dry runs do not require it** -- you can price a purchase without naming an account. This is not bookkeeping: the account is folded into the idempotency token, so leaving it to ambient credentials on one call and naming it explicitly on the next derives two *different* tokens for the *same* account. Every provider's dedupe is token-keyed, so the second call's lookup would miss and buy a second commitment. Refusing an undeterminable account makes that aliasing unreachable. Naming an account explicitly and inheriting the same value from the environment always agree, so they still dedupe normally.
 - Every money-affecting parameter (region, resource type, count, term, payment option, and any provider-specific dimension such as RDS's `az_config`) is validated against an explicit enum or non-empty check before anything is built or sent. There is no silent default for a value that materially changes what gets purchased.
@@ -135,7 +144,7 @@ Understand these before enabling real purchases, especially in a shared or produ
 These are pre-existing behaviours in the underlying purchase clients, not something introduced by or specific to the MCP server -- flagged here so you know what to expect:
 
 - **Azure VM Reservations have no partial-upfront billing plan.** Azure honors exactly two billing plans, all-upfront and no-upfront (billed monthly, same total price -- Azure charges no premium for spreading payments), and `cudly_azure_compute_ri_purchase` defaults `payment_option` to no-upfront when omitted. `payment_option=partial-upfront` has no Azure equivalent and is rejected with an explicit error rather than silently purchased under all-upfront or no-upfront instead.
-- **An Azure purchase with no `payment_option` now fails loud instead of silently billing all-upfront.** `reservations.BillingPlanForPaymentOption` used to fall through an empty payment option to Azure's own implicit default, which is Upfront -- charging the entire commitment immediately even though nobody asked for that schedule. It now returns an explicit error naming the missing value. This is reachable outside the MCP server: migration `000032` added `recommendations.payment_option` as `TEXT NOT NULL` defaulting to the empty string, and `internal/purchase/execution.go` passes `rec.Payment` through without a non-empty check, so **scheduled purchases created from rows predating that migration will now fail rather than silently charge upfront.** That is the intended trade (an unrequested full-upfront charge is worse than a refusal), but it is a live behaviour change: if a scheduled Azure execution starts failing with "no payment option was supplied", set the row's `payment_option` explicitly and re-run. The MCP tool itself is unaffected -- `cudly_azure_compute_ri_purchase` defaults `payment_option` to no-upfront before the client is reached.
+- **An Azure purchase with no `payment_option` now fails loud instead of silently billing all-upfront.** `reservations.BillingPlanForPaymentOption` used to fall through an empty payment option to Azure's own implicit default, which is Upfront -- charging the entire commitment immediately even though nobody asked for that schedule. It now returns an explicit error naming the missing value. This is reachable outside the MCP server: the platform migration `000032` added `recommendations.payment_option` as `TEXT NOT NULL` defaulting to the empty string, and the platform's `internal/purchase/execution.go` passes `rec.Payment` through without a non-empty check, so **scheduled purchases created from rows predating that migration will now fail rather than silently charge upfront.** That is the intended trade (an unrequested full-upfront charge is worse than a refusal), but it is a live behaviour change: if a scheduled Azure execution starts failing with "no payment option was supplied", set the row's `payment_option` explicitly and re-run. The MCP tool itself is unaffected -- `cudly_azure_compute_ri_purchase` defaults `payment_option` to no-upfront before the client is reached.
 - **GCP Compute Engine CUDs commit resources, not instances.** `cudly_gcp_computeengine_cud_purchase` takes `vcpu_count` and `memory_gb` directly (a CUD is a vCPU+memory commitment), not an instance count -- there is no implicit vCPU-per-instance conversion.
 - **AWS Savings Plans searches require term/payment/lookback; `cudly_search_recommendations` defaults them.** Unlike EC2/RDS reservation searches, `GetSavingsPlansPurchaseRecommendation` rejects the call unless all three are set. When `service` targets a Savings Plans search on AWS, the tool fills in unset fields with `term_years=1` (1yr), `payment_option=no-upfront`, `lookback_period=30d` -- an explicitly supplied value is never overridden. A Savings Plans search therefore resolves to exactly one (term, payment, lookback) triple and issues exactly one Cost Explorer call.
 - **Reservation searches fan out over every term and payment option when you omit them.** `GetReservationPurchaseRecommendation` accepts exactly one `TermInYears` and one `PaymentOption` per request and returns recommendations only for that cell -- there is no "give me every variant" mode. So when `term_years` and/or `payment_option` are omitted on an EC2/RDS/ElastiCache/etc search, the tool expands the omitted dimension to its full menu and issues one call per combination (6 when both are omitted, 2 or 3 when one is), returning the concatenated results. Each returned recommendation carries the `term`/`payment_option` of the request that produced it, so its money figures are attributable to a specific offer. If any one combination fails, the whole search fails rather than returning a partial menu -- five of six offers is indistinguishable from "these are all your options". Note that `lookback_period` is NOT fanned out: omitting it leaves Cost Explorer's own server-side default (7 days) in place, since the lookback window is the usage evidence behind an offer rather than another offer to choose from. The fan-out multiplies the API bill along with the coverage: `cudly_search_recommendations` buys no commitment, but Cost Explorer bills per request, so an omitted-term/omitted-payment search costs six requests rather than one (more with pagination). The tool description states this too, so a model does not treat searching as free and re-run it in a loop.
@@ -143,7 +152,7 @@ These are pre-existing behaviours in the underlying purchase clients, not someth
 
 ## Deployment model
 
-`cudly-mcp` is a local/desktop process, not a deployed service: it is intentionally kept out of `iac/`, `terraform/`, and the `internal/api` Lambda packaging path. Run it on the same machine as your MCP client.
+`cudly-mcp` is a local/desktop process, not a deployed service: it is intentionally kept out of the platform component's `iac/`, `terraform/`, and `internal/api` Lambda packaging paths. Run it on the same machine as your MCP client.
 
 ## Troubleshooting
 
@@ -151,3 +160,7 @@ These are pre-existing behaviours in the underlying purchase clients, not someth
 - **Azure/GCP purchase calls appear to hang**: Azure Reservations and GCP Compute Commitments both provision asynchronously after the purchase call returns; a `success=true` response means the purchase request was accepted, not necessarily that the resource is already active in the portal/console. Re-run `cudly_search_recommendations` or check the provider console if you need to confirm activation state.
 - **Rate limits / throttling from the cloud provider**: retry the same tool call with the same parameters -- the idempotency token guarantees a retry cannot double-purchase no matter how long you wait before retrying (see [Safety model](#safety-model)). If you genuinely want a second, separate purchase with the same parameters instead of a retry, pass a fresh `idempotency_nonce` value.
 - **"invalid ... must be one of ..." errors**: every enum-typed parameter (term, payment option, engine, az_config, sp_type, scope, tenancy, platform) is validated against an explicit allow-list; call `cudly_list_commitment_actions` or re-check this README's per-tool schema for the exact accepted values.
+
+## License and attribution
+
+CUDly is maintained by [LeanerCloud](https://github.com/LeanerCloud) and licensed under the [Open Software License 3.0](LICENSE). See the repository license and attribution files for third-party notices.

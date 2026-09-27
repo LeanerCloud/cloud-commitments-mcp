@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/LeanerCloud/CUDly/pkg/common"
-	"github.com/LeanerCloud/CUDly/pkg/provider"
+	"github.com/LeanerCloud/cloud-commitments-go/pkg/common"
+	"github.com/LeanerCloud/cloud-commitments-go/pkg/provider"
 )
 
 // purchaseMode is the outcome of the dry_run/confirm safety gate: either a

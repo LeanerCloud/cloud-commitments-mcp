@@ -7,8 +7,8 @@ import (
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/LeanerCloud/CUDly/pkg/common"
-	"github.com/LeanerCloud/CUDly/pkg/provider"
+	"github.com/LeanerCloud/cloud-commitments-go/pkg/common"
+	"github.com/LeanerCloud/cloud-commitments-go/pkg/provider"
 )
 
 const awsEC2RIPurchaseName = "cudly_aws_ec2_ri_purchase"

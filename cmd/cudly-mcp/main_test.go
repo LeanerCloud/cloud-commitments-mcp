@@ -11,8 +11,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	cudlymcp "github.com/LeanerCloud/CUDly/mcp"
-	"github.com/LeanerCloud/CUDly/mcp/tools"
+	cudlymcp "github.com/LeanerCloud/cloud-commitments-mcp"
+	"github.com/LeanerCloud/cloud-commitments-mcp/tools"
 )
 
 // isolateFromAmbientAWS points the AWS SDK at deliberately nonexistent

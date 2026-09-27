@@ -3,7 +3,7 @@
   "name": "io.github.LeanerCloud/cudly-mcp",
   "description": "Search and buy AWS/Azure/GCP reserved capacity (RIs, Savings Plans, CUDs) via any MCP client.",
   "repository": {
-    "url": "https://github.com/LeanerCloud/CUDly",
+    "url": "https://github.com/LeanerCloud/cloud-commitments-mcp",
     "source": "github"
   },
   "version": "0.1.0",
@@ -11,7 +11,7 @@
   "packages": [
     {
       "registryType": "mcpb",
-      "identifier": "https://github.com/LeanerCloud/CUDly/releases/download/v0.1.0/cudly-mcp-full.mcpb",
+      "identifier": "https://github.com/LeanerCloud/cloud-commitments-mcp/releases/download/v0.1.0/cudly-mcp-full.mcpb",
       "fileSha256": "0000000000000000000000000000000000000000000000000000000000000000",
       "transport": {
         "type": "stdio"
@@ -19,7 +19,7 @@
       "environmentVariables": [
         {
           "name": "CUDLY_MCP_ENABLE_REAL_PURCHASES",
-          "description": "Set to 1 (or true) to let purchase tools execute real, money-spending purchases. Unset (the default) refuses every dry_run=false call before any provider or credential is touched -- see mcp/README.md 'Safety model'.",
+          "description": "Set to 1 (or true) to let purchase tools execute real, money-spending purchases. Unset (the default) refuses every dry_run=false call before any provider or credential is touched -- see README.md 'Safety model'.",
           "isRequired": false,
           "isSecret": false,
           "format": "string"
