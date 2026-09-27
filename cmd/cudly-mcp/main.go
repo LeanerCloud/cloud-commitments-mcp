@@ -14,10 +14,10 @@ import (
 
 	gosdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
-	cudlymcp "github.com/LeanerCloud/CUDly/mcp"
-	_ "github.com/LeanerCloud/CUDly/providers/aws"
-	_ "github.com/LeanerCloud/CUDly/providers/azure"
-	_ "github.com/LeanerCloud/CUDly/providers/gcp"
+	_ "github.com/LeanerCloud/cloud-commitments-go/providers/aws"
+	_ "github.com/LeanerCloud/cloud-commitments-go/providers/azure"
+	_ "github.com/LeanerCloud/cloud-commitments-go/providers/gcp"
+	cudlymcp "github.com/LeanerCloud/cloud-commitments-mcp"
 )
 
 // Version is overridable at build time via:

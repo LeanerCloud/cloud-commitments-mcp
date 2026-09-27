@@ -10,7 +10,7 @@ import (
 
 	gosdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/LeanerCloud/CUDly/mcp/tools"
+	"github.com/LeanerCloud/cloud-commitments-mcp/tools"
 )
 
 // ServerName is the MCP Implementation.Name this server identifies as.

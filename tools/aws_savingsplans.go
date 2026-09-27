@@ -10,9 +10,9 @@ import (
 	spTypes "github.com/aws/aws-sdk-go-v2/service/savingsplans/types"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/LeanerCloud/CUDly/pkg/common"
-	"github.com/LeanerCloud/CUDly/pkg/provider"
-	"github.com/LeanerCloud/CUDly/providers/aws/services/savingsplans"
+	"github.com/LeanerCloud/cloud-commitments-go/pkg/common"
+	"github.com/LeanerCloud/cloud-commitments-go/pkg/provider"
+	"github.com/LeanerCloud/cloud-commitments-go/providers/aws/services/savingsplans"
 )
 
 const awsSavingsPlansPurchaseName = "cudly_aws_savingsplans_purchase"

@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/LeanerCloud/CUDly/mcp/tools"
+	"github.com/LeanerCloud/cloud-commitments-mcp/tools"
 )
 
 // allDescriptors returns the Descriptor for every tool this server exposes,
