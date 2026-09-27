@@ -58,6 +58,32 @@ else
     exit 1
 fi
 
+# The no-op say() above means "git secrets --install -f" returning success no
+# longer proves anything: with say() removed the real signal was its exit
+# status, but say() itself is a no-op that returns success regardless of
+# whether install_hook actually wrote the file (e.g. a permissions error on
+# chmod). Verify what the command was supposed to do instead: each hook file
+# it writes exists, is executable, and contains the git-secrets invocation.
+git_dir="$(git rev-parse --git-dir)"
+hooks_ok=1
+for hook_spec in "commit-msg:commit_msg_hook" "pre-commit:pre_commit_hook" "prepare-commit-msg:prepare_commit_msg_hook"; do
+    hook_name="${hook_spec%%:*}"
+    hook_cmd="${hook_spec##*:}"
+    hook_path="${git_dir}/hooks/${hook_name}"
+    if [ -d "${git_dir}/hooks/${hook_name}.d" ]; then
+        hook_path="${git_dir}/hooks/${hook_name}.d/git-secrets"
+    fi
+    if [ ! -x "${hook_path}" ] || ! grep -qF "git secrets --${hook_cmd} -- \"\$@\"" "${hook_path}"; then
+        echo -e "${RED}✗ ${hook_name} hook missing, not executable, or doesn't invoke git-secrets: ${hook_path}${NC}"
+        hooks_ok=0
+    fi
+done
+if [ "${hooks_ok}" -ne 1 ]; then
+    echo -e "${RED}✗ Hook verification failed; git-secrets would not actually run on commit${NC}"
+    exit 1
+fi
+echo -e "${GREEN}✓ Verified all three hooks are installed and executable${NC}"
+
 # Register AWS secret patterns
 echo ""
 echo "Registering AWS secret patterns..."
