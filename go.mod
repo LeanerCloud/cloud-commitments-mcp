@@ -64,7 +64,7 @@ require (
 	golang.org/x/net v0.58.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/sync v0.22.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
+	golang.org/x/sys v0.47.0
 	golang.org/x/text v0.41.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
 	google.golang.org/api v0.274.0 // indirect
@@ -77,11 +77,12 @@ require (
 )
 
 require (
-	github.com/LeanerCloud/cloud-commitments-go/pkg v0.0.0-20260928074610-6168f8b5360d
-	github.com/LeanerCloud/cloud-commitments-go/providers/aws v0.0.0-20260928074610-6168f8b5360d
-	github.com/LeanerCloud/cloud-commitments-go/providers/azure v0.0.0-20260928074610-6168f8b5360d
-	github.com/LeanerCloud/cloud-commitments-go/providers/gcp v0.0.0-20260928074610-6168f8b5360d
+	github.com/LeanerCloud/cloud-commitments-go/pkg v0.0.0-20260928132534-fe940a89483d
+	github.com/LeanerCloud/cloud-commitments-go/providers/aws v0.0.0-20260928132534-fe940a89483d
+	github.com/LeanerCloud/cloud-commitments-go/providers/azure v0.0.0-20260928132534-fe940a89483d
+	github.com/LeanerCloud/cloud-commitments-go/providers/gcp v0.0.0-20260928132534-fe940a89483d
 	github.com/google/jsonschema-go v0.4.3
+	github.com/google/uuid v1.6.0
 	github.com/modelcontextprotocol/go-sdk v1.6.1
 )
 
@@ -106,7 +107,6 @@ require (
 	github.com/envoyproxy/go-control-plane/envoy v1.37.0 // indirect
 	github.com/envoyproxy/protoc-gen-validate v1.3.3 // indirect
 	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
 	github.com/segmentio/asm v1.1.3 // indirect
 	github.com/segmentio/encoding v0.5.4 // indirect
