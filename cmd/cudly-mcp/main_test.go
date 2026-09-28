@@ -1,19 +1,52 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"log"
+	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/LeanerCloud/cloud-commitments-go/pkg/common"
 	gosdk "github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/unix"
 
 	cudlymcp "github.com/LeanerCloud/cloud-commitments-mcp"
 	"github.com/LeanerCloud/cloud-commitments-mcp/tools"
 )
+
+const runAsMCPServerEnv = "CUDLY_MCP_TEST_HELPER_PROCESS"
+
+func TestMain(m *testing.M) {
+	if os.Getenv(runAsMCPServerEnv) == "1" {
+		main()
+		os.Exit(0)
+	}
+
+	auditDir, err := os.MkdirTemp("", "cudly-mcp-audit-testmain")
+	if err != nil {
+		log.Printf("create MCP audit test directory: %v", err)
+		os.Exit(1)
+	}
+	if err := os.Setenv(tools.EnvAuditLog, filepath.Join(auditDir, "mcp-audit.jsonl")); err != nil {
+		log.Printf("set MCP audit log test path: %v", err)
+		if cleanupErr := os.RemoveAll(auditDir); cleanupErr != nil {
+			log.Printf("remove MCP audit test directory after setup failure: %v", cleanupErr)
+		}
+		os.Exit(1)
+	}
+
+	code := m.Run()
+	os.RemoveAll(auditDir)
+	os.Exit(code)
+}
 
 // isolateFromAmbientAWS points the AWS SDK at deliberately nonexistent
 // profile/config/credentials so config.LoadDefaultConfig cannot resolve any
@@ -36,6 +69,208 @@ func isolateFromAmbientAWS(t *testing.T) {
 	t.Setenv("AWS_CONTAINER_CREDENTIALS_FULL_URI", "")
 	t.Setenv("AWS_ROLE_ARN", "")
 	t.Setenv("AWS_WEB_IDENTITY_TOKEN_FILE", "")
+}
+
+func holdMCPAuditLog(t *testing.T, path string) func() {
+	t.Helper()
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0o600)
+	require.NoError(t, err)
+	release := func() {
+		if f != nil {
+			assert.NoError(t, f.Close())
+			f = nil
+		}
+	}
+	t.Cleanup(release)
+	require.NoError(t, unix.Flock(int(f.Fd()), unix.LOCK_EX|unix.LOCK_NB))
+	return release
+}
+
+func mcpChildEnv(auditPath string) []string {
+	childEnv := make([]string, 0, len(os.Environ())+3)
+	for _, entry := range os.Environ() {
+		if strings.HasPrefix(entry, tools.EnvAuditLog+"=") || strings.HasPrefix(entry, tools.EnvEnableRealPurchases+"=") {
+			continue
+		}
+		childEnv = append(childEnv, entry)
+	}
+	return append(childEnv,
+		runAsMCPServerEnv+"=1",
+		tools.EnvAuditLog+"="+auditPath,
+		tools.EnvEnableRealPurchases+"=",
+	)
+}
+
+func callMCPPreview(t *testing.T, session *gosdk.ClientSession) {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	result, err := session.CallTool(ctx, &gosdk.CallToolParams{
+		Name: "cudly_aws_ec2_ri_purchase",
+		Arguments: map[string]any{
+			"region":         "us-east-1",
+			"instance_type":  "m5.large",
+			"count":          1,
+			"term_years":     1,
+			"payment_option": "no-upfront",
+			"aws_profile":    "cudly-mcp-synthetic-profile",
+			"dry_run":        true,
+			"confirm":        false,
+		},
+	})
+	require.NoError(t, err)
+	require.False(t, result.IsError)
+	structured, err := json.Marshal(result.StructuredContent)
+	require.NoError(t, err)
+	var response tools.PurchaseResponse
+	require.NoError(t, json.Unmarshal(structured, &response))
+	require.True(t, response.Success)
+	require.True(t, response.DryRun)
+}
+
+func TestMainAuditLockTimeout(t *testing.T) {
+	t.Run("startup", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "mcp-audit.jsonl")
+		original := []byte("existing-record\n")
+		require.NoError(t, os.WriteFile(path, original, 0o600))
+		holdMCPAuditLog(t, path)
+
+		exe, err := os.Executable()
+		require.NoError(t, err)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		cmd := exec.CommandContext(ctx, exe)
+		cmd.Env = mcpChildEnv(path)
+		var stderr bytes.Buffer
+		cmd.Stderr = &stderr
+		client := gosdk.NewClient(&gosdk.Implementation{Name: "test-client"}, nil)
+		session, err := client.Connect(ctx, &gosdk.CommandTransport{Command: cmd}, nil)
+		if session != nil {
+			defer func() { assert.NoError(t, session.Close()) }()
+		}
+		require.Error(t, err)
+		require.NoError(t, ctx.Err())
+		assert.Contains(t, stderr.String(), "timed out acquiring audit lock")
+		data, readErr := os.ReadFile(path)
+		require.NoError(t, readErr)
+		require.Equal(t, original, data)
+	})
+
+	t.Run("preview", func(t *testing.T) {
+		isolateFromAmbientAWS(t)
+		path := filepath.Join(t.TempDir(), "mcp-audit.jsonl")
+		original := []byte("existing-record\n")
+		require.NoError(t, os.WriteFile(path, original, 0o600))
+		exe, err := os.Executable()
+		require.NoError(t, err)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		defer cancel()
+		cmd := exec.CommandContext(ctx, exe)
+		cmd.Env = mcpChildEnv(path)
+		var stderr bytes.Buffer
+		cmd.Stderr = &stderr
+		client := gosdk.NewClient(&gosdk.Implementation{Name: "test-client"}, nil)
+		session, err := client.Connect(ctx, &gosdk.CommandTransport{Command: cmd}, nil)
+		if session != nil {
+			defer func() { assert.NoError(t, session.Close()) }()
+		}
+		require.NoError(t, err)
+		releaseHolder := holdMCPAuditLog(t, path)
+		callMCPPreview(t, session)
+		require.NoError(t, session.Close())
+		require.NoError(t, ctx.Err())
+		assert.Contains(t, stderr.String(), "timed out acquiring audit lock")
+		data, readErr := os.ReadFile(path)
+		require.NoError(t, readErr)
+		require.Equal(t, original, data)
+		releaseHolder()
+
+		freshCmd := exec.CommandContext(ctx, exe)
+		freshCmd.Env = mcpChildEnv(path)
+		var freshStderr bytes.Buffer
+		freshCmd.Stderr = &freshStderr
+		freshClient := gosdk.NewClient(&gosdk.Implementation{Name: "test-client"}, nil)
+		freshSession, err := freshClient.Connect(ctx, &gosdk.CommandTransport{Command: freshCmd}, nil)
+		if freshSession != nil {
+			defer func() { assert.NoError(t, freshSession.Close()) }()
+		}
+		require.NoError(t, err)
+		callMCPPreview(t, freshSession)
+		require.NoError(t, freshSession.Close())
+		require.NoError(t, ctx.Err())
+
+		data, readErr = os.ReadFile(path)
+		require.NoError(t, readErr)
+		require.True(t, bytes.HasPrefix(data, original))
+		lines := bytes.Split(bytes.TrimSuffix(data, []byte{'\n'}), []byte{'\n'})
+		require.Len(t, lines, 2)
+		var record common.AuditRecord
+		require.NoError(t, json.Unmarshal(lines[1], &record))
+		assert.Equal(t, "skipped", record.Status)
+		assert.True(t, record.DryRun)
+		assert.Equal(t, "cudly-mcp-synthetic-profile", record.CredentialScope)
+		assert.Equal(t, common.PurchaseSourceMCP, record.Source)
+		assert.Equal(t, common.ProviderAWS, record.Provider)
+		assert.Equal(t, string(common.ServiceEC2), record.Service)
+	})
+}
+
+func TestMainRejectsStdoutAuditLogBeforeProtocolTraffic(t *testing.T) {
+	info, err := os.Stat("/dev/stdout")
+	if err != nil {
+		t.Skipf("/dev/stdout unavailable: %v", err)
+	}
+	if info.Mode().IsRegular() {
+		t.Skip("/dev/stdout is a regular file in this environment")
+	}
+
+	exe, err := os.Executable()
+	require.NoError(t, err)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, exe)
+	childEnv := make([]string, 0, len(os.Environ())+2)
+	for _, entry := range os.Environ() {
+		if strings.HasPrefix(entry, tools.EnvAuditLog+"=") {
+			continue
+		}
+		childEnv = append(childEnv, entry)
+	}
+	cmd.Env = append(childEnv, runAsMCPServerEnv+"=1", tools.EnvAuditLog+"=/dev/stdout")
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
+	client := gosdk.NewClient(&gosdk.Implementation{Name: "test-client"}, nil)
+	session, err := client.Connect(ctx, &gosdk.CommandTransport{
+		Command:           cmd,
+		TerminateDuration: time.Second,
+	}, nil)
+	if err == nil {
+		_, err = session.CallTool(ctx, &gosdk.CallToolParams{
+			Name: "cudly_aws_ec2_ri_purchase",
+			Arguments: map[string]any{
+				"region":         "us-east-1",
+				"instance_type":  "m5.large",
+				"count":          1,
+				"term_years":     1,
+				"payment_option": "no-upfront",
+			},
+		})
+		closeErr := session.Close()
+		if err == nil {
+			err = closeErr
+		}
+	}
+
+	require.Error(t, err)
+	assert.NotContains(t, err.Error(), "invalid message version tag")
+	assert.NoError(t, ctx.Err())
+	stderrText := stderr.String()
+	assert.Contains(t, stderrText, "failed to build server")
+	assert.Contains(t, stderrText, "non-regular audit log target")
 }
 
 // TestRealPurchasePastProviderRegistration is the regression guard for the
