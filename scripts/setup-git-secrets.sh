@@ -105,9 +105,9 @@ git secrets --add 'AIza[0-9A-Za-z_-]{35}'                              # GCP API
 git secrets --add 'DefaultEndpointsProtocol=https'                      # Azure Connection String
 
 # Generic secrets (require quoted values to avoid matching variable declarations)
-git secrets --add 'password\s*[=:]\s*['\''"][^'\''"]{8,}'             # Password with quoted value
-git secrets --add 'api[_-]?key\s*[=:]\s*['\''"][^'\''"]{8,}'         # API key with quoted value
-git secrets --add 'secret[_-]?key\s*[=:]\s*['\''"][^'\''"]{8,}'      # Secret key with quoted value
+git secrets --add 'password[[:space:]]*[=:][[:space:]]*['\''"][^'\''"]{8,}'             # Password with quoted value
+git secrets --add 'api[_-]?key[[:space:]]*[=:][[:space:]]*['\''"][^'\''"]{8,}'         # API key with quoted value
+git secrets --add 'secret[_-]?key[[:space:]]*[=:][[:space:]]*['\''"][^'\''"]{8,}'      # Secret key with quoted value
 git secrets --add 'BEGIN[[:space:]]((RSA|DSA|EC|OPENSSH|ENCRYPTED)[[:space:]])?PRIVATE[[:space:]]KEY-----'  # PEM private keys
 
 # Database connection strings

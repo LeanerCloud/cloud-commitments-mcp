@@ -77,17 +77,27 @@
 ^scripts/setup-git-secrets\.sh:[0-9]+:git secrets --add 'postgre[s]://\[\^:\]\+:\[\^@\]\+@'                           # PostgreSQL$
 ^scripts/setup-git-secrets\.sh:[0-9]+:git secrets --add 'mysq[l]://\[\^:\]\+:\[\^@\]\+@'                              # MySQL$
 
-# Truncated PEM fixtures used by scripts/test-git-secrets-allowlist.sh (and
-
 # Truncated PEM placeholder used by scripts/test-git-secrets-allowlist.sh
 # (and by any fixture in this repo needing a non-secret PEM-shaped string):
 # a PEM header immediately followed by "\n..." (optionally with a short
-# base64 prefix) is never a real key body, so a line consisting of exactly
-# that shape is safe. Anchored two ways so it cannot become the #1972 hole
-# again: the header must be the whole quoted value (no room for a secret
-# spliced in before "-----BEGIN" or between "BEGIN" and "PRIVATE KEY-----"),
-# and the tail is pinned with $ to only the closing quote/comma this
-# repo's fixtures actually use (no room for a secret appended after "...").
+# base64 prefix) is never a real key body, so a line consisting of EXACTLY
+# a "PrivateKey:" or "private_key" assignment to that shape is safe.
+#
+# Anchored on the WHOLE scanner output line, not just the quoted value:
+# .gitallowed suppresses a line if ANY allowed pattern matches anywhere in
+# it, regardless of which prohibited pattern fired, so a real secret in an
+# earlier, unrelated statement on the same physical line as this entry's
+# fixture would otherwise be suppressed too, even though the entry has
+# nothing to do with that secret (a fixture below exercises exactly this:
+# a key assigned before the fixture, on the same scanner line, must still
+# be caught -- note this comment must not spell the fixture out as a
+# literal contiguous string either, for the same self-scan reason).
+# ^[^:]+:[0-9]+: pins the match to the start of git-secrets' own
+# "path:line:content" format, so the key assignment must be the first thing
+# on the line (only leading whitespace allowed), and the trailing $ pins the
+# tail to only the closing quote/comma this repo's fixtures actually use.
+# Both ends are load-bearing -- do not loosen either back to an open match.
+#
 # One letter of "PRIVATE" is bracketed for the same self-scan reason the
 # block above explains -- do not tidy it back to a bare word.
-"-----BEGIN PRIVAT[E] KEY-----\\n(MIIEvQIBADANBg)?\.\.\.(\\n)?",?$
+^[^:]+:[0-9]+:[[:space:]]*("private_key"|PrivateKey):[[:space:]]*"-----BEGIN PRIVAT[E] KEY-----\\n(MIIEvQIBADANBg)?\.\.\.(\\n)?",?$

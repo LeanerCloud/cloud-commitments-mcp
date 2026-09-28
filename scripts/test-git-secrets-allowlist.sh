@@ -119,6 +119,12 @@ run_case "untruncated PKCS8 body" 1 e.json \
     '"private_key": "'"$PEM"'\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC\n"'
 run_case "corrected GCP API key range" 1 f.txt \
     "$AIZA"
+run_case "password with real spaces around the separator" 1 n.txt \
+    'password = "hunter2hunter2"'
+run_case "secret before an otherwise-allowed truncated PEM, same line" 1 l.go \
+    'k := "'"$KEY"'"; PrivateKey: "'"$PEM"'\n...",'
+run_case "secret after an otherwise-allowed truncated PEM, same line" 1 m.go \
+    '"private_key": "'"$PEM"'\nMIIEvQIBADANBg...\n'"$KEY"'"'
 
 # Negative controls for the setup-script allowlist entries below, each
 # closing one instance of the same class of hole (#1972 reintroduced at
