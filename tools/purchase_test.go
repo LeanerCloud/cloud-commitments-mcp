@@ -425,11 +425,12 @@ func TestExecutePurchaseRealPurchaseGate(t *testing.T) {
 // token -- never a caller-suppliable source string.
 func TestExecutePurchaseRealPurchaseCallsProviderWithMCPSource(t *testing.T) {
 	t.Parallel()
+	cost := 600.0
 	fake := &fakeServiceClient{
 		purchaseResult: common.PurchaseResult{
 			Success:      true,
 			CommitmentID: "ri-12345",
-			Cost:         600,
+			Cost:         &cost,
 		},
 	}
 	resolve := func(_ context.Context) (provider.ServiceClient, error) {

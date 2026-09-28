@@ -2,8 +2,11 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
+	"time"
 
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -206,6 +209,68 @@ func TestAWSEC2RIPurchaseHandleRealPurchaseResolvesEC2Client(t *testing.T) {
 	assert.Equal(t, "us-east-1", gotRegion)
 	assert.Equal(t, 1, fake.purchaseCalls)
 	assert.Equal(t, common.PurchaseSourceMCP, fake.lastOpts.Source)
+}
+
+func TestAWSEC2RIPurchaseCostJSON(t *testing.T) {
+	t.Parallel()
+	zero, positive := 0.0, 600.0
+	cases := []struct {
+		name string
+		cost *float64
+	}{
+		{"unknown", nil},
+		{"zero", &zero},
+		{"positive", &positive},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			fake := &fakeServiceClient{purchaseResult: common.PurchaseResult{Success: true, Cost: tc.cost}}
+			var gotService common.ServiceType
+			var gotRegion string
+			tool := &awsEC2RIPurchaseTool{
+				createProvider: func(_ string, _ *provider.ProviderConfig) (provider.Provider, error) {
+					return &recordingProvider{
+						fakeProvider: &fakeProvider{name: "aws"}, client: fake,
+						gotService: &gotService, gotRegion: &gotRegion,
+					}, nil
+				},
+			}
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			server := mcp.NewServer(&mcp.Implementation{Name: "test-server"}, nil)
+			require.NoError(t, tool.Register(server))
+			clientTransport, serverTransport := mcp.NewInMemoryTransports()
+			serverSession, err := server.Connect(ctx, serverTransport, nil)
+			require.NoError(t, err)
+			defer serverSession.Close()
+			client := mcp.NewClient(&mcp.Implementation{Name: "test-client"}, nil)
+			session, err := client.Connect(ctx, clientTransport, nil)
+			require.NoError(t, err)
+			defer session.Close()
+			args := validEC2Args()
+			args.DryRun, args.Confirm = boolPtr(false), boolPtr(true)
+			result, err := session.CallTool(ctx, &mcp.CallToolParams{Name: awsEC2RIPurchaseName, Arguments: args})
+			require.NoError(t, err)
+			require.False(t, result.IsError)
+			structured, err := json.Marshal(result.StructuredContent)
+			require.NoError(t, err)
+			var fields map[string]any
+			require.NoError(t, json.Unmarshal(structured, &fields))
+			assert.Equal(t, true, fields["success"])
+			assert.Equal(t, false, fields["dry_run"])
+			assert.Equal(t, 1, fake.purchaseCalls)
+			if tc.cost == nil {
+				assert.NotContains(t, fields, "cost")
+			} else {
+				require.Contains(t, fields, "cost")
+				assert.Equal(t, *tc.cost, fields["cost"])
+			}
+			assert.NotContains(t, fields, "on_demand_cost")
+			assert.NotContains(t, fields, "estimated_savings")
+			assert.NotContains(t, fields, "savings_percentage")
+		})
+	}
 }
 
 // recordingProvider wraps fakeProvider to capture the service/region passed

@@ -287,16 +287,8 @@ func ResolveDryRunConfirm(dryRun, confirm *bool) (effectiveDryRun, effectiveConf
 // protocol-level error -- ExecutePurchase itself still returns a Go error
 // for gate refusals and provider-call failures.
 //
-// Cost/OnDemandCost/EstimatedSavings/SavingsPercentage are pointers with
-// omitempty: none of the *FromArgs constructors in this package populate
-// Recommendation's cost fields (they build a fresh Recommendation from the
-// caller's typed args, not from a priced search result), and some provider
-// clients (e.g. AWS EC2 RIs, Savings Plans) never populate
-// PurchaseResult.Cost either. A plain float64 could not distinguish "not
-// known" from "genuinely $0", so every response reported 0 for money fields
-// it never actually priced. A pointer that's nil (and omitted from the JSON
-// payload entirely) when no real value exists lets a caller tell "unknown"
-// apart from "confirmed zero" (feedback_nullable_not_zero).
+// Executed Cost is the provider-reported total upfront cost: nil is omitted,
+// while a known zero is retained. Unpriced recommendation fields are omitted.
 //
 // EffectiveDate is a pointer for the same reason, and it is not a
 // hypothetical concern: `omitempty` on a string only drops "", so a
@@ -380,12 +372,7 @@ func termYearsFromRecommendationTerm(term string) int {
 	return years
 }
 
-// nonZeroCostPtr returns a pointer to v, or nil when v is exactly zero. Cost
-// and savings fields on common.Recommendation and common.PurchaseResult are
-// plain (unpointered) float64s that upstream code sometimes never populates
-// (see the PurchaseResponse doc comment above); this treats an unpopulated
-// zero as "unknown" rather than fabricating a real $0 figure the caller
-// never priced.
+// Recommendation's scalar cost and savings fields use zero for unpriced values.
 func nonZeroCostPtr(v float64) *float64 {
 	if v == 0 {
 		return nil
@@ -670,7 +657,7 @@ func ExecutePurchase(ctx context.Context, req PurchaseRequest) (*PurchaseRespons
 		Success:           purchaseSucceeded(result),
 		DryRun:            result.DryRun,
 		CommitmentID:      result.CommitmentID,
-		Cost:              nonZeroCostPtr(result.Cost),
+		Cost:              result.Cost,
 		OnDemandCost:      nonZeroCostPtr(rec.OnDemandCost),
 		EstimatedSavings:  nonZeroCostPtr(rec.EstimatedSavings),
 		SavingsPercentage: nonZeroCostPtr(rec.SavingsPercentage),
