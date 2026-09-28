@@ -97,20 +97,38 @@ jobs:
           sh /tmp/trivy-install.sh -b /usr/local/bin "${TRIVY_VERSION}"
 
       - name: Install git-secrets
-        # Pinned to a release tag rather than master HEAD. After install
-        # we register the AWS pattern set and ASSERT at least one pattern
-        # was registered — without the assert, a registration failure
-        # produces a patternless scanner that exits 0 unconditionally,
-        # leaving the gate silently downgraded.
+        # Pinned to a release tag rather than master HEAD. The tag is
+        # mutable in principle, so also assert HEAD resolves to the exact
+        # commit verified at the time this was written (`git ls-remote
+        # --tags` against the upstream repo) before trusting it enough to
+        # `sudo make install`. After install we register the AWS pattern
+        # set and ASSERT at least one pattern was registered — without the
+        # assert, a registration failure produces a patternless scanner
+        # that exits 0 unconditionally, leaving the gate silently
+        # downgraded.
+        env:
+          GIT_SECRETS_SHA: ad82d68ee924906a0401dfd48de5057731a9bc84
         run: |
           set -euo pipefail
           git clone --depth 1 --branch 1.3.0 https://github.com/awslabs/git-secrets.git /tmp/git-secrets
+          resolved="$(git -C /tmp/git-secrets rev-parse HEAD)"
+          if [ "${resolved}" != "${GIT_SECRETS_SHA}" ]; then
+            echo "git-secrets 1.3.0 tag resolved to ${resolved}, expected ${GIT_SECRETS_SHA}" >&2
+            exit 1
+          fi
           sudo make -C /tmp/git-secrets install
           git secrets --register-aws --global
           git secrets --list --global | grep -q '.' || {
             echo "git-secrets registration produced no patterns — gate would be silently disabled"
             exit 1
           }
+
+      - name: Run git-secrets allowlist self-test
+        # Self-test for the git-secrets allowlist (#1972): asserts, through
+        # the real pre-commit hook scan path, that secret-shaped fixtures
+        # are still caught and that the documented false positives still
+        # scan clean.
+        run: bash scripts/test-git-secrets-allowlist.sh
 
       # Note: the local `hadolint` hook in .pre-commit-config.yaml (search for
       # `id: hadolint`; no line number, because this comment has already gone
