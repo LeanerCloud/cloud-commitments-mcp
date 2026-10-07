@@ -81,10 +81,13 @@ cmd_scan() {
     # gosec takes one package per argument; joining them into one word and
     # letting the shell split it back out is the portable way to pass a list
     # (bash 3.2 has no nameref/mapfile). Package paths never contain spaces.
+    # -terse, not -quiet: under -quiet gosec reports success before checking
+    # package-processing errors, so a package it failed to parse would pass
+    # the gate without being scanned (verified against v2.28.0).
     local pkg_arg
     pkg_arg=$(IFS=' '; echo "${pkgs[*]}")
     # shellcheck disable=SC2086
-    "$GOSEC_BIN" -quiet -exclude-dir=vendor $pkg_arg
+    "$GOSEC_BIN" -terse -exclude-dir=vendor $pkg_arg
 }
 
 cmd_report() {

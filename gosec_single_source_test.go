@@ -30,11 +30,9 @@ func TestGosecPinHasSingleSource(t *testing.T) {
 	}
 
 	versionRe := regexp.MustCompile(`GOSEC_VERSION="([^"]+)"`)
-	m := versionRe.FindSubmatch(body)
-	if m == nil {
+	if versionRe.FindSubmatch(body) == nil {
 		t.Fatalf("no GOSEC_VERSION declaration in scripts/run-gosec.sh; it is the single source of truth")
 	}
-	version := "v" + string(m[1])
 
 	// Every file that runs or installs gosec. Each must reach run-gosec.sh
 	// rather than carry its own pin, so that is what the test asserts: no
@@ -48,6 +46,12 @@ func TestGosecPinHasSingleSource(t *testing.T) {
 	}
 
 	gosecModuleRe := regexp.MustCompile(`securego/gosec`)
+	// Any gosec-adjacent semver (e.g. `gosec@v2.29.0`, `gosec-v2.29.0` in a
+	// cache key) or GOSEC_VERSION assignment outside the script is a second
+	// pin, even when it matches the script's current value: matching only the
+	// current value would miss a call site that pins a *different* version.
+	versionPinRe := regexp.MustCompile(`(?i)gosec[^\s"']*v[0-9]+\.[0-9]+\.[0-9]+`)
+	versionVarRe := regexp.MustCompile(`(?i)gosec_version\s*[:?]?=`)
 
 	for _, rel := range callSites {
 		t.Run(rel, func(t *testing.T) {
@@ -66,9 +70,9 @@ func TestGosecPinHasSingleSource(t *testing.T) {
 				if strings.HasPrefix(trimmed, "#") {
 					continue
 				}
-				if strings.Contains(line, version) {
-					t.Errorf("%s:%d hardcodes the gosec version %q; call scripts/run-gosec.sh instead "+
-						"(the version is declared once, in that script)", rel, i+1, version)
+				if versionPinRe.MatchString(line) || versionVarRe.MatchString(line) {
+					t.Errorf("%s:%d declares a gosec version; call scripts/run-gosec.sh instead "+
+						"(the version is declared once, in that script)", rel, i+1)
 				}
 				if gosecModuleRe.MatchString(line) {
 					t.Errorf("%s:%d references the gosec module directly; call scripts/run-gosec.sh, "+
@@ -88,10 +92,17 @@ func TestGosecRuleSetsAgree(t *testing.T) {
 
 	repoRoot := repoRoot(t)
 
+	// The delegation must be a real invocation: a comment, or a non-comment
+	// mention such as an `echo` message, would satisfy a plain
+	// strings.Contains even after the actual call was removed. So match the
+	// script named as the argument of a `bash`/`sh` command.
+	// .pre-commit-config.yaml delegates through scripts/gosec-hook.sh, which
+	// itself calls the runner.
 	required := map[string]string{
 		filepath.Join("scripts", "gosec-hook.sh"):       "scripts/run-gosec.sh",
 		filepath.Join("Makefile"):                       "scripts/run-gosec.sh",
 		filepath.Join(".github", "workflows", "ci.yml"): "scripts/run-gosec.sh",
+		".pre-commit-config.yaml":                       "scripts/gosec-hook.sh",
 	}
 
 	for rel, want := range required {
@@ -103,7 +114,18 @@ func TestGosecRuleSetsAgree(t *testing.T) {
 			if err != nil {
 				t.Fatalf("read %s: %v", path, err)
 			}
-			if !strings.Contains(string(content), want) {
+			invokeRe := regexp.MustCompile(`(?:^|\s)(?:ba)?sh\s+"?\S*` + regexp.QuoteMeta(want))
+			found := false
+			for _, line := range strings.Split(string(content), "\n") {
+				if strings.HasPrefix(strings.TrimSpace(line), "#") {
+					continue
+				}
+				if invokeRe.MatchString(line) {
+					found = true
+					break
+				}
+			}
+			if !found {
 				t.Errorf("%s does not invoke %s; a local run and the CI job "+
 					"would enforce different gosec rules", rel, want)
 			}
