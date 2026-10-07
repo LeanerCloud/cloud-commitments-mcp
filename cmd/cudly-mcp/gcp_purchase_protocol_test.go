@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -28,13 +29,16 @@ import (
 // (the exported library seam for tests; the library's own MockCommitmentsService
 // is test-only) so the library's real computeengine client can complete a
 // purchase without GCP credentials or network.
-type fakeComputeEngineCommitmentsService struct{}
+type fakeComputeEngineCommitmentsService struct {
+	insertCalls atomic.Int32
+}
 
 func (f *fakeComputeEngineCommitmentsService) List(_ context.Context, _ *computepb.ListRegionCommitmentsRequest) computeengine.CommitmentsIterator {
 	return &fakeComputeEngineCommitmentsIterator{}
 }
 
 func (f *fakeComputeEngineCommitmentsService) Insert(_ context.Context, _ *computepb.InsertRegionCommitmentRequest) (computeengine.CommitmentsOperation, error) {
+	f.insertCalls.Add(1)
 	return &fakeComputeEngineCommitmentsOperation{}, nil
 }
 
@@ -61,7 +65,8 @@ func (o *fakeComputeEngineCommitmentsOperation) Wait(_ context.Context, _ ...gax
 // commitments service injected); every other method fails loudly so a
 // regression that reaches further into the provider surface is visible.
 type fakeGCPProvider struct {
-	cfg *provider.ProviderConfig
+	cfg                *provider.ProviderConfig
+	commitmentsService *fakeComputeEngineCommitmentsService
 }
 
 func (p *fakeGCPProvider) Name() string        { return "gcp" }
@@ -98,7 +103,7 @@ func (p *fakeGCPProvider) GetServiceClient(ctx context.Context, service common.S
 	if err != nil {
 		return nil, err
 	}
-	client.SetCommitmentsService(&fakeComputeEngineCommitmentsService{})
+	client.SetCommitmentsService(p.commitmentsService)
 	return client, nil
 }
 
@@ -122,10 +127,11 @@ func (p *fakeGCPProvider) GetRecommendationsClient(_ context.Context) (provider.
 // lives at the library boundary (tools/gcp_computeengine_cud_safeguards_test.go).
 func TestGCPComputeEngineCUDPurchaseStructuredCost(t *testing.T) {
 	t.Setenv(tools.EnvEnableRealPurchases, "1")
+	service := &fakeComputeEngineCommitmentsService{}
 
 	provider.GetRegistry().Unregister("gcp")
 	err := provider.RegisterProvider("gcp", func(cfg *provider.ProviderConfig) (provider.Provider, error) {
-		return &fakeGCPProvider{cfg: cfg}, nil
+		return &fakeGCPProvider{cfg: cfg, commitmentsService: service}, nil
 	})
 	require.NoError(t, err)
 	t.Cleanup(func() {
@@ -182,6 +188,7 @@ func TestGCPComputeEngineCUDPurchaseStructuredCost(t *testing.T) {
 	})
 	require.NoError(t, err, "CallTool itself must not return a transport-level error")
 	require.False(t, result.IsError, "a successful fake-backed purchase must not surface as a tool error: %+v", result.Content)
+	require.Equal(t, int32(1), service.insertCalls.Load())
 
 	require.NotNil(t, result.StructuredContent, "structured output must be present")
 	encoded, err := json.Marshal(result.StructuredContent)
