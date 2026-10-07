@@ -215,12 +215,12 @@ func TestAWSEC2RIPurchaseCostJSON(t *testing.T) {
 	t.Parallel()
 	zero, positive := 0.0, 600.0
 	cases := []struct {
-		name string
 		cost *float64
+		name string
 	}{
-		{"unknown", nil},
-		{"zero", &zero},
-		{"positive", &positive},
+		{name: "unknown", cost: nil},
+		{name: "zero", cost: &zero},
+		{name: "positive", cost: &positive},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

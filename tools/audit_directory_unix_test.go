@@ -27,8 +27,8 @@ func TestProductionAuditDirectoryOpsRejectsUnrepresentableDescriptor(t *testing.
 	parent := &tracedAuditDirectory{fd: uintptr(math.MaxInt) + 1}
 	ops := productionAuditDirectoryOps()
 	tests := []struct {
-		name string
 		run  func() (auditDirectoryHandle, error)
+		name string
 	}{
 		{
 			name: "mkdirat",
@@ -234,10 +234,10 @@ func auditPathBehindUnreadableAncestor(t *testing.T) (string, string) {
 }
 
 type auditDirectoryTrace struct {
-	operations  []string
 	mkdirErrors map[string]error
 	syncErrors  map[string]error
 	closeErrors map[string]error
+	operations  []string
 }
 
 func (t *auditDirectoryTrace) ops() auditDirectoryOps {
@@ -258,8 +258,8 @@ func (t *auditDirectoryTrace) ops() auditDirectoryOps {
 }
 
 type tracedAuditDirectory struct {
-	name  string
 	trace *auditDirectoryTrace
+	name  string
 	fd    uintptr
 }
 

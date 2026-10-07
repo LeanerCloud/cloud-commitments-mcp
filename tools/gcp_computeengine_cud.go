@@ -36,15 +36,15 @@ const gcpPaymentOption = "monthly"
 // pointer, unlike every AWS Details assertion) and hard-errors when
 // MemoryGB is absent or <= 0 rather than guessing a vCPU:memory ratio.
 type gcpComputeEngineCUDPurchaseArgs struct {
+	DryRun           *bool   `json:"dry_run,omitempty" jsonschema:"preview only, no purchase; defaults to true"`
+	Confirm          *bool   `json:"confirm,omitempty" jsonschema:"required (with dry_run=false) to execute a real purchase; defaults to false"`
 	Region           string  `json:"region" jsonschema:"GCP region, e.g. us-central1"`
 	MachineType      string  `json:"machine_type" jsonschema:"GCP machine type family for the commitment, e.g. n2-standard-4"`
+	GCPProjectID     string  `json:"gcp_project_id,omitempty" jsonschema:"GCP project ID to buy for. Optional for a dry_run preview (the ambient project is used); REQUIRED for a real purchase (dry_run=false, confirm=true), which is refused without it because GCP has no ambient project variable that reliably names the target project"`
+	IdempotencyNonce string  `json:"idempotency_nonce,omitempty" jsonschema:"optional; set to a fresh value to authorize a purchase that is otherwise identical to a previous one (e.g. buy 3 more RIs with the same parameters); leave empty (the default) so retries with identical parameters dedupe and never double-buy"`
 	VCPUCount        int     `json:"vcpu_count" jsonschema:"number of vCPUs to commit, must be > 0"`
 	MemoryGB         float64 `json:"memory_gb" jsonschema:"amount of memory (GB) to commit, must be > 0"`
 	TermYears        int     `json:"term_years" jsonschema:"commitment length in years"`
-	GCPProjectID     string  `json:"gcp_project_id,omitempty" jsonschema:"GCP project ID to buy for. Optional for a dry_run preview (the ambient project is used); REQUIRED for a real purchase (dry_run=false, confirm=true), which is refused without it because GCP has no ambient project variable that reliably names the target project"`
-	DryRun           *bool   `json:"dry_run,omitempty" jsonschema:"preview only, no purchase; defaults to true"`
-	Confirm          *bool   `json:"confirm,omitempty" jsonschema:"required (with dry_run=false) to execute a real purchase; defaults to false"`
-	IdempotencyNonce string  `json:"idempotency_nonce,omitempty" jsonschema:"optional; set to a fresh value to authorize a purchase that is otherwise identical to a previous one (e.g. buy 3 more RIs with the same parameters); leave empty (the default) so retries with identical parameters dedupe and never double-buy"`
 }
 
 type gcpComputeEngineCUDPurchaseTool struct {
