@@ -116,6 +116,7 @@ install-dev-tools:
 	@go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
 	@echo "Installing gosec (pinned version lives in scripts/run-gosec.sh)..."
 	@bash scripts/run-gosec.sh install
+	@echo "gosec is installed into ~/.cache/pre-commit-gosec/<version>/ (not GOPATH/bin), so it will not be on PATH; invoke it via scripts/run-gosec.sh."
 	@echo "Installing staticcheck $(STATICCHECK_VERSION)..."
 	@go install honnef.co/go/tools/cmd/staticcheck@$(STATICCHECK_VERSION)
 	@echo "Installing gocyclo $(GOCYCLO_VERSION)..."

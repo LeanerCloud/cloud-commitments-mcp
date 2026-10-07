@@ -159,9 +159,11 @@ jobs:
           restore-keys: |
             pre-commit-${{ runner.os }}-
 
-      # Cache the Go build cache so `go vet`, `gosec`, and any other
-      # Go-compiling hooks reuse compiled object files instead of
-      # rebuilding from source. setup-go@v6 caches ~/go/pkg/mod
+      # Cache the Go build cache so `go vet` and any other Go-compiling
+      # hooks reuse compiled object files instead of rebuilding from
+      # source. The gosec hook is not one of them: it is SKIPped in this
+      # workflow (see the "Run pre-commit" step), so it never compiles
+      # anything here. setup-go@v6 caches ~/go/pkg/mod
       # (modules) but NOT ~/.cache/go-build (compiled output) — this
       # step covers the latter. Keyed on go.sum so a dep upgrade still
       # invalidates the cache and gets clean builds.

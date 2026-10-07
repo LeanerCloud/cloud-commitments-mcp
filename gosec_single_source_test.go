@@ -95,13 +95,17 @@ func TestGosecRuleSetsAgree(t *testing.T) {
 	// The delegation must be a real invocation: a comment, or a non-comment
 	// mention such as an `echo` message, would satisfy a plain
 	// strings.Contains even after the actual call was removed. So match the
-	// script named as the argument of a `bash`/`sh` command.
+	// script named as the argument of a `bash`/`sh` command. The Makefile
+	// and ci.yml patterns additionally pin the `report` subcommand, their
+	// actual scan invocation: a bare script match would keep passing with
+	// the scan line deleted, because `make install-dev-tools` also calls
+	// the script (`run-gosec.sh install`).
 	// .pre-commit-config.yaml delegates through scripts/gosec-hook.sh, which
 	// itself calls the runner.
 	required := map[string]string{
 		filepath.Join("scripts", "gosec-hook.sh"):       "scripts/run-gosec.sh",
-		filepath.Join("Makefile"):                       "scripts/run-gosec.sh",
-		filepath.Join(".github", "workflows", "ci.yml"): "scripts/run-gosec.sh",
+		filepath.Join("Makefile"):                       "scripts/run-gosec.sh report",
+		filepath.Join(".github", "workflows", "ci.yml"): "scripts/run-gosec.sh report",
 		".pre-commit-config.yaml":                       "scripts/gosec-hook.sh",
 	}
 
