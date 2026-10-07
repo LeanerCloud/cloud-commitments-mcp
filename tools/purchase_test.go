@@ -65,10 +65,10 @@ func TestMain(m *testing.M) {
 // PurchaseCommitment is exercised by these tests; the rest of the interface
 // is implemented trivially to satisfy the type.
 type fakeServiceClient struct {
-	purchaseCalls  int
 	purchaseResult common.PurchaseResult
 	purchaseErr    error
 	lastOpts       common.PurchaseOptions
+	purchaseCalls  int
 }
 
 func (f *fakeServiceClient) GetServiceType() common.ServiceType { return common.ServiceEC2 }
@@ -150,15 +150,15 @@ func TestDecidePurchaseMode(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name    string
+		want    purchaseMode
 		dryRun  bool
 		confirm bool
-		want    purchaseMode
 		wantErr bool
 	}{
-		{"dry run wins regardless of confirm", true, false, modePreview, false},
-		{"dry run with confirm still previews", true, true, modePreview, false},
-		{"confirmed real purchase executes", false, true, modeExecute, false},
-		{"unconfirmed real purchase refused", false, false, 0, true},
+		{name: "dry run wins regardless of confirm", dryRun: true, confirm: false, want: modePreview, wantErr: false},
+		{name: "dry run with confirm still previews", dryRun: true, confirm: true, want: modePreview, wantErr: false},
+		{name: "confirmed real purchase executes", dryRun: false, confirm: true, want: modeExecute, wantErr: false},
+		{name: "unconfirmed real purchase refused", dryRun: false, confirm: false, want: 0, wantErr: true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -954,19 +954,19 @@ func TestResolveDryRunConfirm(t *testing.T) {
 	ptr := func(b bool) *bool { return &b }
 
 	cases := []struct {
-		name        string
 		dryRun      *bool
 		confirm     *bool
+		name        string
 		wantDryRun  bool
 		wantConfirm bool
 	}{
-		{"both omitted defaults to preview", nil, nil, true, false},
+		{name: "both omitted defaults to preview", dryRun: nil, confirm: nil, wantDryRun: true, wantConfirm: false},
 		// The safety-critical row: confirm=true alone must NOT execute.
 		// decidePurchaseMode then sees dryRun=true and previews.
-		{"omitted dry_run stays preview even when confirmed", nil, ptr(true), true, true},
-		{"explicit false dry_run is honored", ptr(false), ptr(true), false, true},
-		{"explicit true dry_run is honored", ptr(true), ptr(false), true, false},
-		{"explicit false confirm is honored", ptr(false), ptr(false), false, false},
+		{name: "omitted dry_run stays preview even when confirmed", dryRun: nil, confirm: ptr(true), wantDryRun: true, wantConfirm: true},
+		{name: "explicit false dry_run is honored", dryRun: ptr(false), confirm: ptr(true), wantDryRun: false, wantConfirm: true},
+		{name: "explicit true dry_run is honored", dryRun: ptr(true), confirm: ptr(false), wantDryRun: true, wantConfirm: false},
+		{name: "explicit false confirm is honored", dryRun: ptr(false), confirm: ptr(false), wantDryRun: false, wantConfirm: false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

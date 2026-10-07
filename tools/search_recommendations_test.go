@@ -15,21 +15,22 @@ import (
 // fakeRecommendationsClient is a minimal provider.RecommendationsClient test
 // double; only GetRecommendations is exercised by search_recommendations.
 type fakeRecommendationsClient struct {
-	lastParams *common.RecommendationParams
-	recs       []common.Recommendation
-	err        error
-	calls      int
+	err         error
+	errForCombo error
+	lastParams  *common.RecommendationParams
+	recs        []common.Recommendation
 
 	// allParams records the params of EVERY call, not just the last, so
 	// fan-out tests can assert the exact set of (term, payment) combos a
 	// search issued rather than only the combo that happened to run last.
 	allParams []common.RecommendationParams
 
+	calls int
+
 	// errOnCall, when non-zero, makes the 1-based call with that index fail
 	// with errForCombo. Used to prove one failing combo fails the whole
 	// search instead of silently returning the combos that succeeded.
-	errOnCall   int
-	errForCombo error
+	errOnCall int
 }
 
 func (f *fakeRecommendationsClient) GetRecommendations(_ context.Context, params *common.RecommendationParams) ([]common.Recommendation, error) {
@@ -62,10 +63,10 @@ var _ provider.RecommendationsClient = (*fakeRecommendationsClient)(nil)
 
 // fakeProvider is a minimal provider.Provider test double.
 type fakeProvider struct {
-	name      string
-	services  []common.ServiceType
 	recClient provider.RecommendationsClient
 	recErr    error
+	name      string
+	services  []common.ServiceType
 }
 
 func (f *fakeProvider) Name() string        { return f.name }
@@ -208,12 +209,12 @@ func TestSearchRecommendationsTrimsCredentialOverrides(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
+		got      func(cfg *provider.ProviderConfig) string
 		name     string
 		provider string
 		service  common.ServiceType
-		args     searchRecommendationsArgs
-		got      func(cfg *provider.ProviderConfig) string
 		want     string
+		args     searchRecommendationsArgs
 	}{
 		{
 			name:     "aws profile",

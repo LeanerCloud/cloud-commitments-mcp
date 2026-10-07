@@ -9,6 +9,17 @@ import "github.com/modelcontextprotocol/go-sdk/mcp"
 // there is exactly one place each tool's name/description/example prompts
 // are written.
 type Descriptor struct {
+	// Annotations are the MCP tool hints (ReadOnlyHint, DestructiveHint,
+	// IdempotentHint, OpenWorldHint) plus a human-readable Title, shared
+	// verbatim with the live mcp.Tool registration -- the same drift
+	// protection Description gets. Every Descriptor must set this
+	// explicitly via readOnlyAnnotations or purchaseAnnotations: per the MCP
+	// spec (see the go-sdk's ToolAnnotations doc comments), a nil
+	// DestructiveHint/OpenWorldHint pointer defaults to TRUE on the wire, so
+	// a nil Annotations field would silently publish "destructive,
+	// open-world, not read-only" for a tool that is neither. There is no
+	// safe zero value.
+	Annotations *mcp.ToolAnnotations
 	// Name is the MCP tool name, e.g. "cudly_aws_ec2_ri_purchase".
 	Name string
 	// Provider is "aws", "azure", "gcp", or "" for provider-agnostic
@@ -21,26 +32,15 @@ type Descriptor struct {
 	// Description is the tool's full MCP description, shared verbatim with
 	// the live mcp.Tool registration so the two can never disagree.
 	Description string
-	// Annotations are the MCP tool hints (ReadOnlyHint, DestructiveHint,
-	// IdempotentHint, OpenWorldHint) plus a human-readable Title, shared
-	// verbatim with the live mcp.Tool registration -- the same drift
-	// protection Description gets. Every Descriptor must set this
-	// explicitly via readOnlyAnnotations or purchaseAnnotations: per the MCP
-	// spec (see the go-sdk's ToolAnnotations doc comments), a nil
-	// DestructiveHint/OpenWorldHint pointer defaults to TRUE on the wire, so
-	// a nil Annotations field would silently publish "destructive,
-	// open-world, not read-only" for a tool that is neither. There is no
-	// safe zero value.
-	Annotations *mcp.ToolAnnotations
+	// ExamplePrompts are 2-3 natural-language prompts that would plausibly
+	// invoke this tool, surfaced by cudly_list_commitment_actions so a
+	// session that doesn't know the tool name yet can find it.
+	ExamplePrompts []string
 	// RealPurchaseEnabled reports whether this tool can execute a real,
 	// money-spending purchase today (dry_run=false, confirm=true). false for
 	// read-only tools and for tools shipped dry-run-only pending a
 	// prerequisite fix (see the Azure/GCP tool comments).
 	RealPurchaseEnabled bool
-	// ExamplePrompts are 2-3 natural-language prompts that would plausibly
-	// invoke this tool, surfaced by cudly_list_commitment_actions so a
-	// session that doesn't know the tool name yet can find it.
-	ExamplePrompts []string
 }
 
 // Registration is implemented by every tool file. Descriptor feeds the

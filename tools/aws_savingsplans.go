@@ -41,16 +41,16 @@ const savingsPlansAccountLevelRegion = "us-east-1"
 // meaningful for EC2Instance plans (common.SavingsPlanDetails); Compute,
 // SageMaker, and Database plans are family-agnostic and account-level.
 type savingsPlansPurchaseArgs struct {
+	DryRun           *bool   `json:"dry_run,omitempty" jsonschema:"preview only, no purchase; defaults to true"`
+	Confirm          *bool   `json:"confirm,omitempty" jsonschema:"required (with dry_run=false) to execute a real purchase; defaults to false"`
 	SPType           string  `json:"sp_type" jsonschema:"AWS Savings Plans type"`
-	HourlyCommitment float64 `json:"hourly_commitment" jsonschema:"USD/hour commitment amount, must be > 0"`
-	TermYears        int     `json:"term_years" jsonschema:"commitment length in years"`
 	PaymentOption    string  `json:"payment_option" jsonschema:"payment schedule"`
 	InstanceFamily   string  `json:"instance_family,omitempty" jsonschema:"EC2 instance family, e.g. m5; only meaningful for sp_type=EC2Instance"`
 	Region           string  `json:"region,omitempty" jsonschema:"AWS region; required for sp_type=EC2Instance, ignored for account-level plan types"`
 	AWSProfile       string  `json:"aws_profile,omitempty" jsonschema:"AWS named profile override (~/.aws/config); default uses ambient credentials"`
-	DryRun           *bool   `json:"dry_run,omitempty" jsonschema:"preview only, no purchase; defaults to true"`
-	Confirm          *bool   `json:"confirm,omitempty" jsonschema:"required (with dry_run=false) to execute a real purchase; defaults to false"`
 	IdempotencyNonce string  `json:"idempotency_nonce,omitempty" jsonschema:"optional; set to a fresh value to authorize a purchase that is otherwise identical to a previous one (e.g. buy 3 more RIs with the same parameters); leave empty (the default) so retries with identical parameters dedupe and never double-buy"`
+	HourlyCommitment float64 `json:"hourly_commitment" jsonschema:"USD/hour commitment amount, must be > 0"`
+	TermYears        int     `json:"term_years" jsonschema:"commitment length in years"`
 }
 
 type awsSavingsPlansPurchaseTool struct {

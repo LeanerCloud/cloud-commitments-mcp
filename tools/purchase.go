@@ -78,11 +78,8 @@ type ResolveClientFunc func(ctx context.Context) (provider.ServiceClient, error)
 // per-service tool handler builds one after validating its own typed
 // parameters and constructing the common.Recommendation.
 type PurchaseRequest struct {
-	Region         string
-	Recommendation common.Recommendation
-	DryRun         bool
-	Confirm        bool
-	ResolveClient  ResolveClientFunc
+	ResolveClient ResolveClientFunc
+	Region        string
 
 	// Nonce is optional. When non-empty, this call is treated as a
 	// DISTINCT purchase from an otherwise-identical one (authorizes a
@@ -100,6 +97,10 @@ type PurchaseRequest struct {
 	// See idempotencyKeyFor for why omitting it is a double-spend/skipped-spend
 	// hazard on Azure specifically.
 	CredentialScope string
+
+	Recommendation common.Recommendation
+	DryRun         bool
+	Confirm        bool
 }
 
 // CredentialScope resolves the account/subscription/project identifier that
@@ -298,20 +299,21 @@ func ResolveDryRunConfirm(dryRun, confirm *bool) (effectiveDryRun, effectiveConf
 // a field a caller may key billing or renewal reminders off. Nil (and
 // omitted) when the provider reported no timestamp.
 type PurchaseResponse struct {
-	Success           bool     `json:"success"`
-	DryRun            bool     `json:"dry_run"`
-	CommitmentID      string   `json:"commitment_id,omitempty"`
 	Cost              *float64 `json:"cost,omitempty"`
 	OnDemandCost      *float64 `json:"on_demand_cost,omitempty"`
 	EstimatedSavings  *float64 `json:"estimated_savings,omitempty"`
 	SavingsPercentage *float64 `json:"savings_percentage,omitempty"`
 	EffectiveDate     *string  `json:"effective_date,omitempty"`
-	TermYears         int      `json:"term_years,omitempty"`
-	Error             string   `json:"error,omitempty"`
 
 	// Archera is the optional underutilization-insurance offer, populated
 	// ONLY after a real purchase actually succeeds. See archeraOffer.
 	Archera *ArcheraOffer `json:"archera,omitempty"`
+
+	CommitmentID string `json:"commitment_id,omitempty"`
+	Error        string `json:"error,omitempty"`
+	TermYears    int    `json:"term_years,omitempty"`
+	Success      bool   `json:"success"`
+	DryRun       bool   `json:"dry_run"`
 }
 
 // ArcheraOffer is the post-purchase Archera underutilization-insurance offer.
@@ -328,16 +330,16 @@ type ArcheraOffer struct {
 	Pitch string `json:"pitch"`
 	// SignupURL is the Archera signup link carrying CUDly attribution.
 	SignupURL string `json:"signup_url"`
-	// EnrollmentWindowDays is how long from THIS purchase the buyer has to
-	// enroll it. Surfaced as a number so a client can compute the deadline
-	// from effective_date rather than parsing it out of prose.
-	EnrollmentWindowDays int `json:"enrollment_window_days"`
 	// NonGatingDisclosure states the offer is optional and CUDly works
 	// without it.
 	NonGatingDisclosure string `json:"non_gating_disclosure"`
 	// SponsorshipDisclosure states the financial relationship behind the
 	// recommendation.
 	SponsorshipDisclosure string `json:"sponsorship_disclosure"`
+	// EnrollmentWindowDays is how long from THIS purchase the buyer has to
+	// enroll it. Surfaced as a number so a client can compute the deadline
+	// from effective_date rather than parsing it out of prose.
+	EnrollmentWindowDays int `json:"enrollment_window_days"`
 }
 
 // archeraOffer builds the post-purchase Archera offer.

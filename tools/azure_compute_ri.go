@@ -39,15 +39,15 @@ const azureComputeRIPurchaseDescription = "Purchase an Azure VM Reserved Instanc
 // Recommendation.Details -- providers/azure/services/compute/client.go's
 // buildReservationBody only reads Region/ResourceType/Count/Term/PaymentOption.
 type azureComputeRIPurchaseArgs struct {
-	Region              string `json:"region" jsonschema:"Azure region, e.g. eastus"`
-	VMSize              string `json:"vm_size" jsonschema:"Azure VM size (SKU), e.g. Standard_D2s_v3"`
-	Count               int    `json:"count" jsonschema:"number of VM instances to reserve, must be > 0"`
-	TermYears           int    `json:"term_years" jsonschema:"commitment length in years"`
-	PaymentOption       string `json:"payment_option,omitempty" jsonschema:"payment schedule; Azure honors all-upfront and no-upfront (monthly, same total price); no partial-upfront; defaults to no-upfront"`
-	AzureSubscriptionID string `json:"azure_subscription_id,omitempty" jsonschema:"Azure subscription ID override; default uses AZURE_SUBSCRIPTION_ID"`
 	DryRun              *bool  `json:"dry_run,omitempty" jsonschema:"preview only, no purchase; defaults to true"`
 	Confirm             *bool  `json:"confirm,omitempty" jsonschema:"required (with dry_run=false) to execute a real purchase; defaults to false"`
+	Region              string `json:"region" jsonschema:"Azure region, e.g. eastus"`
+	VMSize              string `json:"vm_size" jsonschema:"Azure VM size (SKU), e.g. Standard_D2s_v3"`
+	PaymentOption       string `json:"payment_option,omitempty" jsonschema:"payment schedule; Azure honors all-upfront and no-upfront (monthly, same total price); no partial-upfront; defaults to no-upfront"`
+	AzureSubscriptionID string `json:"azure_subscription_id,omitempty" jsonschema:"Azure subscription ID override; default uses AZURE_SUBSCRIPTION_ID"`
 	IdempotencyNonce    string `json:"idempotency_nonce,omitempty" jsonschema:"optional; set to a fresh value to authorize a purchase that is otherwise identical to a previous one (e.g. buy 3 more RIs with the same parameters); leave empty (the default) so retries with identical parameters dedupe and never double-buy"`
+	Count               int    `json:"count" jsonschema:"number of VM instances to reserve, must be > 0"`
+	TermYears           int    `json:"term_years" jsonschema:"commitment length in years"`
 }
 
 type azureComputeRIPurchaseTool struct {

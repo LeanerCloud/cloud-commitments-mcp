@@ -454,13 +454,13 @@ func TestValidateHourlyCommitmentRejectsSubCentAmounts(t *testing.T) {
 	t.Run("sub-cent amounts are rejected naming what AWS would have charged", func(t *testing.T) {
 		t.Parallel()
 		for _, tc := range []struct {
-			value      float64
 			wantBilled string
+			value      float64
 		}{
-			{0.004, "0.00"},
-			{10.005, "10.01"},
-			{1.0 / 3.0, "0.33"},
-			{0.001, "0.00"},
+			{value: 0.004, wantBilled: "0.00"},
+			{value: 10.005, wantBilled: "10.01"},
+			{value: 1.0 / 3.0, wantBilled: "0.33"},
+			{value: 0.001, wantBilled: "0.00"},
 		} {
 			err := validateHourlyCommitment(tc.value)
 			require.Error(t, err, "%v is finer than a cent and must be rejected", tc.value)

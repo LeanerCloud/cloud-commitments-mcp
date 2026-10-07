@@ -9,10 +9,10 @@ import (
 )
 
 type schemaTestArgs struct {
-	Region        string `json:"region" jsonschema:"AWS region"`
-	TermYears     int    `json:"term_years" jsonschema:"commitment term in years"`
-	PaymentOption string `json:"payment_option" jsonschema:"payment schedule"`
 	DryRun        *bool  `json:"dry_run,omitempty" jsonschema:"preview only, no purchase"`
+	Region        string `json:"region" jsonschema:"AWS region"`
+	PaymentOption string `json:"payment_option" jsonschema:"payment schedule"`
+	TermYears     int    `json:"term_years" jsonschema:"commitment term in years"`
 }
 
 func TestBuildInputSchemaAppliesEnumAndDefault(t *testing.T) {

@@ -184,12 +184,12 @@ func TestPreviewAuditOmitsAmbientCredentialScopeWhenOverrideOmitted(t *testing.T
 
 	simpleTools := simpleToolConstructors()
 	cases := make([]struct {
-		name string
 		call func(*testing.T)
+		name string
 	}, 0, 5+len(simpleTools))
 	cases = append(cases, []struct {
-		name string
 		call func(*testing.T)
+		name string
 	}{
 		{
 			name: "aws ec2",
@@ -244,8 +244,8 @@ func TestPreviewAuditOmitsAmbientCredentialScopeWhenOverrideOmitted(t *testing.T
 	}...)
 	for product, ctor := range simpleTools {
 		cases = append(cases, struct {
-			name string
 			call func(*testing.T)
+			name string
 		}{
 			name: "aws " + product,
 			call: func(t *testing.T) {

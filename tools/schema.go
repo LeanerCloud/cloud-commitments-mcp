@@ -14,8 +14,6 @@ import (
 // to its Go struct, instead of re-implementing schema post-processing per
 // tool.
 type FieldOverride struct {
-	// Enum, when non-empty, restricts the property to these exact values.
-	Enum []any
 	// Default, when non-nil, is recorded on the schema as the property's
 	// documented default so a caller inspecting the tool (or an MCP client
 	// that surfaces schema defaults in its UI) can see it without reading
@@ -24,6 +22,8 @@ type FieldOverride struct {
 	// applies its own default explicitly (see the dry_run/confirm pattern in
 	// purchase.go) so "omitted" is never silently confused with "false".
 	Default any
+	// Enum, when non-empty, restricts the property to these exact values.
+	Enum []any
 }
 
 // BuildInputSchema infers the JSON Schema for T via jsonschema.For, then

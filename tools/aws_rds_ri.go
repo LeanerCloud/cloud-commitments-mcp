@@ -27,17 +27,17 @@ const awsRDSRIPurchaseDescription = "Purchase AWS RDS Reserved Instances. THIS S
 // prices and do not cover each other's demand), so unlike EC2's
 // platform/tenancy/scope it is a required field here, not a defaulted one.
 type rdsRIPurchaseArgs struct {
+	DryRun           *bool  `json:"dry_run,omitempty" jsonschema:"preview only, no purchase; defaults to true"`
+	Confirm          *bool  `json:"confirm,omitempty" jsonschema:"required (with dry_run=false) to execute a real purchase; defaults to false"`
 	Region           string `json:"region" jsonschema:"AWS region, e.g. us-east-1"`
 	InstanceClass    string `json:"instance_class" jsonschema:"RDS DB instance class, e.g. db.r6g.large"`
-	Count            int    `json:"count" jsonschema:"number of instances to reserve, must be > 0"`
-	TermYears        int    `json:"term_years" jsonschema:"commitment length in years"`
 	PaymentOption    string `json:"payment_option" jsonschema:"payment schedule"`
 	Engine           string `json:"engine" jsonschema:"RDS database engine, e.g. mysql, postgres, mariadb, oracle-se2, sqlserver-ee"`
 	AZConfig         string `json:"az_config" jsonschema:"single-az or multi-az; must match the recommendation exactly (different price, no cross-coverage)"`
 	AWSProfile       string `json:"aws_profile,omitempty" jsonschema:"AWS named profile override (~/.aws/config); default uses ambient credentials"`
-	DryRun           *bool  `json:"dry_run,omitempty" jsonschema:"preview only, no purchase; defaults to true"`
-	Confirm          *bool  `json:"confirm,omitempty" jsonschema:"required (with dry_run=false) to execute a real purchase; defaults to false"`
 	IdempotencyNonce string `json:"idempotency_nonce,omitempty" jsonschema:"optional; set to a fresh value to authorize a purchase that is otherwise identical to a previous one (e.g. buy 3 more RIs with the same parameters); leave empty (the default) so retries with identical parameters dedupe and never double-buy"`
+	Count            int    `json:"count" jsonschema:"number of instances to reserve, must be > 0"`
+	TermYears        int    `json:"term_years" jsonschema:"commitment length in years"`
 }
 
 type awsRDSRIPurchaseTool struct {
