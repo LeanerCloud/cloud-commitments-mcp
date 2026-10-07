@@ -6,7 +6,10 @@ VERSION?=dev
 BUILD_TIME?=$(shell date -u '+%Y-%m-%dT%H:%M:%SZ')
 GIT_SHA?=$(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
 GOLANGCI_LINT_VERSION?=v2.10.1
-GOSEC_VERSION?=v2.28.0
+# gosec is installed on demand by scripts/run-gosec.sh into a version-stamped
+# cache dir, so there is nothing to declare here. Do not re-add a GOSEC_VERSION
+# variable: the script is the single source of truth for the pin and the rule
+# set, and ci.yml plus the pre-commit hook read it from there too.
 GOCYCLO_VERSION?=v0.6.0
 STATICCHECK_VERSION?=v0.7.0
 LDFLAGS=-ldflags "-s -w -X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME) -X main.GitSHA=$(GIT_SHA)"
@@ -92,8 +95,7 @@ complexity-report:
 security-scan: security-scan-go
 
 security-scan-go:
-	@command -v gosec >/dev/null || { echo "gosec not installed. Install: make install-dev-tools" >&2; exit 1; }
-	gosec -fmt=json -out=gosec-report.json -exclude=G101,G104,G115,G204,G301,G304,G402,G505 ./...
+	bash scripts/run-gosec.sh report json gosec-report.json
 
 security-scan-snyk:
 	@command -v snyk >/dev/null || { echo "snyk not installed. Install: npm install -g snyk" >&2; exit 1; }
@@ -112,8 +114,9 @@ setup-git-secrets:
 install-dev-tools:
 	@echo "Installing golangci-lint $(GOLANGCI_LINT_VERSION)..."
 	@go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
-	@echo "Installing gosec $(GOSEC_VERSION)..."
-	@go install github.com/securego/gosec/v2/cmd/gosec@$(GOSEC_VERSION)
+	@echo "Installing gosec (pinned version lives in scripts/run-gosec.sh)..."
+	@bash scripts/run-gosec.sh install
+	@echo "gosec is installed into ~/.cache/pre-commit-gosec/<version>/ (not GOPATH/bin), so it will not be on PATH; invoke it via scripts/run-gosec.sh."
 	@echo "Installing staticcheck $(STATICCHECK_VERSION)..."
 	@go install honnef.co/go/tools/cmd/staticcheck@$(STATICCHECK_VERSION)
 	@echo "Installing gocyclo $(GOCYCLO_VERSION)..."

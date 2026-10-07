@@ -423,18 +423,25 @@ jobs:
         # Still requires checkout and Go setup to have succeeded.
         if: always() && steps.checkout.outcome == 'success' && steps.setup_go.outcome == 'success'
         run: |
-          # Install pinned gosec using the job's existing setup-go.
-          # The securego/gosec Docker action bundles its own Go toolchain which
-          # cannot satisfy the module's go directive, causing a toolchain mismatch.
-          go install github.com/securego/gosec/v2/cmd/gosec@v2.28.0
-          # Scan each owned module independently.
+          # The gosec version and the rule set come from scripts/run-gosec.sh,
+          # which the pre-commit hook and `make security-scan-go` also call, so
+          # this job, a local pre-commit run and a local make run enforce
+          # identical rules. Do not pin gosec here: a second declaration site
+          # is how this gate drifted in the first place.
+          #
+          # gosec is installed by that script into a version-stamped cache dir
+          # rather than via `go install` here, so the pin there is
+          # authoritative even though the runner's GOPATH/bin is on PATH. The
+          # securego/gosec Docker action bundles its own Go toolchain which
+          # cannot satisfy the module's go directive, causing a toolchain
+          # mismatch, which is why this job uses the module's Go setup.
           set -e
           status=0
           for mod in .; do
             tag=$(echo "$mod" | tr './' '--' | sed 's/^-/root/')
             out="$RUNNER_TEMP/gosec-${tag}.sarif"
             echo "==> gosec in $mod"
-            if ! (cd "$mod" && gosec -fmt sarif -out "$out" ./...); then
+            if ! bash scripts/run-gosec.sh report sarif "$out"; then
               echo "::warning::gosec exited non-zero in $mod (findings or a scan error)"
               status=1
             fi
