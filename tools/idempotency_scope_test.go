@@ -36,8 +36,8 @@ func TestAccountLevelSavingsPlanRegionCannotForkIdempotencyToken(t *testing.T) {
 
 	cases := []struct {
 		spType        SPType
-		termYears     int
 		paymentOption PaymentOption
+		termYears     int
 	}{
 		{spType: SPTypeCompute, termYears: int(TermThreeYear), paymentOption: PaymentOptionNoUpfront},
 		{spType: SPTypeSageMaker, termYears: int(TermThreeYear), paymentOption: PaymentOptionNoUpfront},

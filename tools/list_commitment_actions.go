@@ -33,8 +33,8 @@ type ActionEntry struct {
 	Product             string   `json:"product,omitempty"`
 	Action              string   `json:"action,omitempty"`
 	Description         string   `json:"description"`
-	RealPurchaseEnabled bool     `json:"real_purchase_enabled"`
 	ExamplePrompts      []string `json:"example_prompts,omitempty"`
+	RealPurchaseEnabled bool     `json:"real_purchase_enabled"`
 }
 
 // listCommitmentActionsResult is the tool's structured output.

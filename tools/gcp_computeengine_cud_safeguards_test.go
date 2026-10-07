@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"testing"
 	"time"
 
@@ -34,6 +35,10 @@ func (f *fakeGCPCommitmentsService) List(_ context.Context, _ *computepb.ListReg
 func (f *fakeGCPCommitmentsService) Insert(_ context.Context, req *computepb.InsertRegionCommitmentRequest) (computeengine.CommitmentsOperation, error) {
 	f.inserts = append(f.inserts, req)
 	return &fakeGCPCommitmentsOperation{}, nil
+}
+
+func (f *fakeGCPCommitmentsService) Get(_ context.Context, _ *computepb.GetRegionCommitmentRequest) (*computepb.Commitment, error) {
+	return nil, errors.New("fakeGCPCommitmentsService: unexpected Get call")
 }
 
 func (f *fakeGCPCommitmentsService) Close() error { return nil }

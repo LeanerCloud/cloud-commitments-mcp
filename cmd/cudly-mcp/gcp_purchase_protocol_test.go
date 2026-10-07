@@ -38,6 +38,10 @@ func (f *fakeComputeEngineCommitmentsService) Insert(_ context.Context, _ *compu
 	return &fakeComputeEngineCommitmentsOperation{}, nil
 }
 
+func (f *fakeComputeEngineCommitmentsService) Get(_ context.Context, _ *computepb.GetRegionCommitmentRequest) (*computepb.Commitment, error) {
+	return nil, errors.New("fakeComputeEngineCommitmentsService: unexpected Get call")
+}
+
 func (f *fakeComputeEngineCommitmentsService) Close() error { return nil }
 
 type fakeComputeEngineCommitmentsIterator struct{}

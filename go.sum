@@ -82,8 +82,8 @@ github.com/LeanerCloud/cloud-commitments-go/providers/aws v0.0.0-20261003204812-
 github.com/LeanerCloud/cloud-commitments-go/providers/aws v0.0.0-20261003204812-9962786e0695/go.mod h1:d4nsy61/Ptib0SxqMg0ble3yksVm3+QbtUtmGja82PA=
 github.com/LeanerCloud/cloud-commitments-go/providers/azure v0.0.0-20261007133317-58c25f04c49b h1:yurugmfdZjf+dqjfqfDyfoBR3IAiFUpMKQ8URnZnJzQ=
 github.com/LeanerCloud/cloud-commitments-go/providers/azure v0.0.0-20261007133317-58c25f04c49b/go.mod h1:iIvPuWLWd+SXqLHAQNdodYMUAAcq7PnwfScXWgARt5A=
-github.com/LeanerCloud/cloud-commitments-go/providers/gcp v0.0.0-20260929223111-a32fd1a178e9 h1:8OuEGhDypUxV0zv+RisoPKW+i1OGst1DBcNj0gkeA98=
-github.com/LeanerCloud/cloud-commitments-go/providers/gcp v0.0.0-20260929223111-a32fd1a178e9/go.mod h1:SRfSbPLG/s8xQsiQUEuo8KXVthI5NUUQXWahoccfutc=
+github.com/LeanerCloud/cloud-commitments-go/providers/gcp v0.0.0-20261007140823-aa903fe5b7f3 h1:VfQ1UttVqSKBz5huj9cH7iqua5k8y02Z8qKu2oGecIw=
+github.com/LeanerCloud/cloud-commitments-go/providers/gcp v0.0.0-20261007140823-aa903fe5b7f3/go.mod h1:vLtjCWuAcgFc6vlY4l4wpWOYvlj4itk25qjreylWpDQ=
 github.com/aws/aws-sdk-go-v2 v1.41.5 h1:dj5kopbwUsVUVFgO4Fi5BIT3t4WyqIDjGKCangnV/yY=
 github.com/aws/aws-sdk-go-v2 v1.41.5/go.mod h1:mwsPRE8ceUUpiTgF7QmQIJ7lgsKUPQOUl3o72QBrE1o=
 github.com/aws/aws-sdk-go-v2/config v1.29.12 h1:Y/2a+jLPrPbHpFkpAAYkVEtJmxORlXoo5k2g1fa2sUo=

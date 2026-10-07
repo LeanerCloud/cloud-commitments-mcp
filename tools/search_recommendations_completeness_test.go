@@ -158,8 +158,8 @@ func TestSearchRecommendationsAWSCompletenessProtocol(t *testing.T) {
 					encoded, err := json.Marshal(result.StructuredContent)
 					require.NoError(t, err)
 					var menu struct {
-						Count           int               `json:"count"`
 						Recommendations []json.RawMessage `json:"recommendations"`
+						Count           int               `json:"count"`
 					}
 					require.NoError(t, json.Unmarshal(encoded, &menu))
 					wantCount := len(wantRequests)
@@ -185,10 +185,10 @@ type recommendationCompletenessRequest struct {
 }
 
 type recommendationCompletenessHTTP struct {
-	mu         sync.Mutex
 	kind       string
 	requests   []recommendationCompletenessRequest
 	unexpected []string
+	mu         sync.Mutex
 }
 
 func (f *recommendationCompletenessHTTP) Do(req *http.Request) (*http.Response, error) {
