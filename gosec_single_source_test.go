@@ -118,7 +118,7 @@ func TestGosecRuleSetsAgree(t *testing.T) {
 			if err != nil {
 				t.Fatalf("read %s: %v", path, err)
 			}
-			invokeRe := regexp.MustCompile(`^\s*(?:@|exec\s+|if\s+!\s+|entry:\s*)?(?:ba)?sh\s+"?\S*` + regexp.QuoteMeta(want))
+			invokeRe := regexp.MustCompile(`^\s*(?:@|exec\s+|if\s+!\s+|entry:\s*)?(?:ba)?sh\s+"?\S*` + regexp.QuoteMeta(want) + `"?(?:\s|$)`)
 			found := false
 			for _, line := range strings.Split(string(content), "\n") {
 				if strings.HasPrefix(strings.TrimSpace(line), "#") {
