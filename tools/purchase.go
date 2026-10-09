@@ -299,7 +299,7 @@ func ResolveDryRunConfirm(dryRun, confirm *bool) (effectiveDryRun, effectiveConf
 // a field a caller may key billing or renewal reminders off. Nil (and
 // omitted) when the provider reported no timestamp.
 type PurchaseResponse struct {
-	Cost              *float64 `json:"cost,omitempty"`
+	Cost              *float64 `json:"cost,omitempty" jsonschema:"USD. Preview (Savings Plans only): total commitment over the whole term, not per hour. Executed purchase: provider-reported upfront cost. Omitted when unknown"`
 	OnDemandCost      *float64 `json:"on_demand_cost,omitempty"`
 	EstimatedSavings  *float64 `json:"estimated_savings,omitempty"`
 	SavingsPercentage *float64 `json:"savings_percentage,omitempty"`
@@ -578,6 +578,10 @@ func authorizeRealPurchase(req PurchaseRequest, rec common.Recommendation) error
 	if !realPurchasesEnabled() {
 		return fmt.Errorf("real purchases are disabled: set %s=1 to allow the MCP server to execute real purchases",
 			EnvEnableRealPurchases)
+	}
+	// Operator spend ceiling, per call. See enforceSpendCaps.
+	if err := enforceSpendCaps(rec); err != nil {
+		return err
 	}
 	// Target account must be determinable. See requireCredentialScope for why
 	// an undeterminable one is a double-purchase hazard, not a cosmetic gap.

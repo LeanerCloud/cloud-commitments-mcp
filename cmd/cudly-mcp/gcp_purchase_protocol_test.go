@@ -127,6 +127,9 @@ func (p *fakeGCPProvider) GetRecommendationsClient(_ context.Context) (provider.
 // lives at the library boundary (tools/gcp_computeengine_cud_safeguards_test.go).
 func TestGCPComputeEngineCUDPurchaseStructuredCost(t *testing.T) {
 	t.Setenv(tools.EnvEnableRealPurchases, "1")
+	t.Setenv(tools.EnvMaxCount, "1000")
+	t.Setenv(tools.EnvMaxHourlyCommitment, "1000")
+	t.Setenv(tools.EnvMaxMemoryGB, "1000")
 	service := &fakeComputeEngineCommitmentsService{}
 
 	provider.GetRegistry().Unregister("gcp")

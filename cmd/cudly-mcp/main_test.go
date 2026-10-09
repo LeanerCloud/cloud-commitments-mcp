@@ -300,6 +300,9 @@ func TestRealPurchasePastProviderRegistration(t *testing.T) {
 	// must clear the operator-side EnvEnableRealPurchases gate too, or every
 	// assertion below would instead observe the gate's own refusal.
 	t.Setenv(tools.EnvEnableRealPurchases, "1")
+	t.Setenv(tools.EnvMaxCount, "1000")
+	t.Setenv(tools.EnvMaxHourlyCommitment, "1000")
+	t.Setenv(tools.EnvMaxMemoryGB, "1000")
 
 	server, err := cudlymcp.NewServer("test-regression")
 	require.NoError(t, err)
