@@ -32,7 +32,7 @@ type rdsRIPurchaseArgs struct {
 	Region           string `json:"region" jsonschema:"AWS region, e.g. us-east-1"`
 	InstanceClass    string `json:"instance_class" jsonschema:"RDS DB instance class, e.g. db.r6g.large"`
 	PaymentOption    string `json:"payment_option" jsonschema:"payment schedule"`
-	Engine           string `json:"engine" jsonschema:"RDS database engine, e.g. mysql, postgres, mariadb, oracle-se2, sqlserver-ee"`
+	Engine           string `json:"engine" jsonschema:"RDS database engine, e.g. mysql, postgres, mariadb, aurora-mysql, aurora-postgresql; Oracle and SQL Server are refused"`
 	AZConfig         string `json:"az_config" jsonschema:"single-az or multi-az; must match the recommendation exactly (different price, no cross-coverage)"`
 	AWSProfile       string `json:"aws_profile,omitempty" jsonschema:"AWS named profile override (~/.aws/config); default uses ambient credentials"`
 	IdempotencyNonce string `json:"idempotency_nonce,omitempty" jsonschema:"optional; set to a fresh value to authorize a purchase that is otherwise identical to a previous one (e.g. buy 3 more RIs with the same parameters); leave empty (the default) so retries with identical parameters dedupe and never double-buy"`

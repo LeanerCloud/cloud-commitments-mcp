@@ -10,7 +10,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/elasticache v1.50.3 // indirect
 	github.com/aws/aws-sdk-go-v2/service/memorydb v1.31.4 // indirect
 	github.com/aws/aws-sdk-go-v2/service/opensearch v1.52.3 // indirect
-	github.com/aws/aws-sdk-go-v2/service/rds v1.97.3 // indirect
+	github.com/aws/aws-sdk-go-v2/service/rds v1.97.3
 	github.com/aws/aws-sdk-go-v2/service/redshift v1.58.3 // indirect
 	github.com/stretchr/testify v1.11.1
 )

@@ -32,6 +32,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed
 
+- Bumped the four cloud-commitments-go modules to 8a3d92b, which brings these
+  purchase safeguards: RDS purchases match the offering exactly and refuse
+  Oracle and SQL Server (go#300); EC2 and Redshift purchases are sent once and
+  a lost response reports "purchase outcome unknown" instead of retrying
+  (go#297); EC2 rejects an empty or unknown tenancy or scope (go#210);
+  OpenSearch matches reserved offerings exactly (go#191); re-driven purchases
+  that adopt an existing commitment are flagged by the library (go#263, go#264;
+  the MCP response shape is unchanged).
+- The RDS purchase tool schema no longer advertises engines the library refuses.
+
 - Remove debug console.log from frontend recommendation handler
 - Align pre-commit gocyclo threshold (10) with CI pipeline
 - Pin tool versions in GitHub Actions for reproducible builds
