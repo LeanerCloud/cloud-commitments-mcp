@@ -68,6 +68,7 @@ type fakeProvider struct {
 	svc       provider.ServiceClient
 	svcErr    error
 	accounts  []common.Account
+	acctErr   error
 	name      string
 	services  []common.ServiceType
 }
@@ -80,7 +81,7 @@ func (f *fakeProvider) GetCredentials() (provider.Credentials, error) {
 }
 func (f *fakeProvider) ValidateCredentials(_ context.Context) error { return nil }
 func (f *fakeProvider) GetAccounts(_ context.Context) ([]common.Account, error) {
-	return f.accounts, nil
+	return f.accounts, f.acctErr
 }
 func (f *fakeProvider) GetRegions(_ context.Context) ([]common.Region, error) {
 	return nil, nil

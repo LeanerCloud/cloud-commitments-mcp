@@ -2,8 +2,10 @@ package tools
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/LeanerCloud/cloud-commitments-go/pkg/common"
 	"github.com/LeanerCloud/cloud-commitments-go/pkg/provider"
@@ -222,8 +224,7 @@ func dedupeSearchResults(ctx context.Context, prov provider.Provider, recs []com
 			continue
 		}
 		if err := checkGroup(ctx, prov, checker, &callerAccount, recs, idxs, mode, reason, decisions); err != nil {
-			return nil, searchDedupe{}, fmt.Errorf("dedupe check failed for %s in %s: %w; the credentials need %s to list existing commitments; no recommendations returned",
-				gk.service, gk.region, err, listPermission(first))
+			return nil, searchDedupe{}, dedupeFailure(gk, first, err)
 		}
 		out.Groups = append(out.Groups, group)
 	}
@@ -248,6 +249,38 @@ func dedupeSearchResults(ctx context.Context, prov provider.Provider, recs []com
 		kept = append(kept, *rec)
 	}
 	return kept, out, nil
+}
+
+// accountLookupError is a failure to resolve the caller's account, which needs
+// a different permission than listing commitments.
+type accountLookupError struct {
+	err        error
+	permission string
+}
+
+func (e *accountLookupError) Error() string { return e.err.Error() }
+func (e *accountLookupError) Unwrap() error { return e.err }
+
+// listingError is a failure to list existing commitments.
+type listingError struct{ err error }
+
+func (e *listingError) Error() string { return e.err.Error() }
+func (e *listingError) Unwrap() error { return e.err }
+
+// dedupeFailure builds the loud failure, naming only the permission that the
+// failing step actually needs.
+func dedupeFailure(gk groupKey, first common.Recommendation, err error) error {
+	var acct *accountLookupError
+	var list *listingError
+	switch {
+	case errors.As(err, &acct):
+		return fmt.Errorf("dedupe check failed for %s in %s: %w; the credentials need %s to identify the calling account; no recommendations returned",
+			gk.service, gk.region, err, acct.permission)
+	case errors.As(err, &list):
+		return fmt.Errorf("dedupe check failed for %s in %s: %w; the credentials need %s to list existing commitments; no recommendations returned",
+			gk.service, gk.region, err, listPermission(first))
+	}
+	return fmt.Errorf("dedupe check failed for %s in %s: %w; no recommendations returned", gk.service, gk.region, err)
 }
 
 type recDecision struct {
@@ -296,7 +329,7 @@ func checkGroup(ctx context.Context, prov provider.Provider, checker *recfilter.
 		}
 		passed, filtered, err := checker.AdjustRecommendationsForExisting(ctx, batch, client)
 		if err != nil {
-			return err
+			return &listingError{err: err}
 		}
 		outcomes, err := pairOutcomes(batch, passed, filtered)
 		if err != nil {
@@ -408,7 +441,11 @@ func (a *accountResolver) callerID(ctx context.Context) (string, error) {
 	}
 	accounts, err := a.prov.GetAccounts(ctx)
 	if err != nil {
-		return "", fmt.Errorf("resolve caller account: %w", err)
+		permission := "sts:GetCallerIdentity"
+		if strings.Contains(err.Error(), "organizations") {
+			permission = "organizations:ListAccounts"
+		}
+		return "", &accountLookupError{err: fmt.Errorf("resolve caller account: %w", err), permission: permission}
 	}
 	a.done = true
 	for _, acct := range accounts {

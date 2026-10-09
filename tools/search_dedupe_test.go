@@ -385,3 +385,52 @@ func TestSearchResultCarriesTheDedupeBlock(t *testing.T) {
 	require.True(t, ok, "%s", raw)
 	assert.Len(t, d["suppressed"], 1, "a suppressed rec is listed, never silently dropped")
 }
+
+// Azure's reservation key ignores scope and term, so it is flag-only: a
+// commitment that would cover the rec must produce a flag, never a removal.
+func TestDedupeAzureIsFlagOnlyNeverSuppressed(t *testing.T) {
+	lc := &listingClient{commitments: []common.Commitment{{
+		Provider: common.ProviderAzure, Service: common.ServiceCompute, Region: "eastus", ResourceType: "Standard_D2s_v3",
+		Count: 4, State: common.CommitmentStateActive, StartDate: dedupeRecent,
+	}}}
+	p := &svcProvider{fakeProvider: fakeProvider{name: "azure"}, byService: map[common.ServiceType]provider.ServiceClient{common.ServiceCompute: lc}}
+	rec := common.Recommendation{
+		Provider: common.ProviderAzure, Service: common.ServiceCompute, Region: "eastus", ResourceType: "Standard_D2s_v3",
+		Count: 4, Term: "1yr", PaymentOption: "upfront",
+	}
+	kept, d, err := runDedupe(t, p, []common.Recommendation{rec})
+	require.NoError(t, err)
+	assert.Equal(t, []common.Recommendation{rec}, kept, "an Azure rec covered by a recent reservation must stay visible")
+	assert.Empty(t, d.Suppressed)
+	require.Len(t, d.Flagged, 1)
+	assert.Equal(t, statusPossiblyCovered, d.Flagged[0].Status)
+	assert.Equal(t, 1, lc.listCalls)
+}
+
+// The error must name the permission that is actually missing.
+func TestDedupeAccountLookupFailureNamesTheRightPermission(t *testing.T) {
+	cases := map[string]struct{ err, want, notWant string }{
+		"sts":           {"failed to get current account: AccessDenied", "sts:GetCallerIdentity", "rds:DescribeReservedDBInstances"},
+		"organizations": {"organizations: list accounts: AccessDenied", "organizations:ListAccounts", "rds:DescribeReservedDBInstances"},
+	}
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			p := awsProvider(map[common.ServiceType]provider.ServiceClient{common.ServiceRDS: &listingClient{}})
+			p.acctErr = errors.New(c.err)
+			kept, _, err := runDedupe(t, p, []common.Recommendation{rdsRec(2, "1yr", "all-upfront", dedupeCaller)})
+			require.Error(t, err)
+			assert.Nil(t, kept)
+			assert.Contains(t, err.Error(), c.want)
+			assert.NotContains(t, err.Error(), c.notWant)
+			assert.Contains(t, err.Error(), "AccessDenied")
+		})
+	}
+}
+
+func TestDedupeServiceClientFailureClaimsNoPermission(t *testing.T) {
+	p := awsProvider(nil)
+	p.byService = map[common.ServiceType]provider.ServiceClient{}
+	_, _, err := runDedupe(t, p, []common.Recommendation{rdsRec(2, "1yr", "all-upfront", dedupeCaller)})
+	require.Error(t, err)
+	assert.NotContains(t, err.Error(), "the credentials need")
+}
