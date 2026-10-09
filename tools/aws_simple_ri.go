@@ -36,7 +36,7 @@ type simpleAWSRIPurchaseArgs struct {
 	PaymentOption    string `json:"payment_option" jsonschema:"payment schedule"`
 	AWSProfile       string `json:"aws_profile,omitempty" jsonschema:"AWS named profile override (~/.aws/config); default uses ambient credentials"`
 	IdempotencyNonce string `json:"idempotency_nonce,omitempty" jsonschema:"optional; set to a fresh value to authorize a purchase that is otherwise identical to a previous one (e.g. buy 3 more RIs with the same parameters); leave empty (the default) so retries with identical parameters dedupe and never double-buy"`
-	Count            int    `json:"count" jsonschema:"number of nodes/instances to reserve, must be > 0"`
+	Count            int    `json:"count" jsonschema:"number of nodes/instances to reserve, must be > 0; real purchases are capped by the operator (CUDLY_MCP_MAX_COUNT)"`
 	TermYears        int    `json:"term_years" jsonschema:"commitment length in years"`
 }
 

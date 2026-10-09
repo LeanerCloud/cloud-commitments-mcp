@@ -41,6 +41,16 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
+	// Generous default caps so suites that predate the spend ceiling keep
+	// exercising what happens once a purchase is authorized. The cap tests
+	// override these (non-parallel) per case.
+	for env, v := range map[string]string{EnvMaxCount: "1000000", EnvMaxHourlyCommitment: "1000000", EnvMaxMemoryGB: "1000000"} {
+		if err := os.Setenv(env, v); err != nil {
+			log.Printf("set %s for MCP tests: %v", env, err)
+			os.Exit(1)
+		}
+	}
+
 	auditDir, err := os.MkdirTemp("", "cudly-mcp-audit-testmain")
 	if err != nil {
 		log.Printf("create MCP tool audit test directory: %v", err)
