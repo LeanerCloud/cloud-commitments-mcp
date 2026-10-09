@@ -65,6 +65,9 @@ var _ provider.RecommendationsClient = (*fakeRecommendationsClient)(nil)
 type fakeProvider struct {
 	recClient provider.RecommendationsClient
 	recErr    error
+	svc       provider.ServiceClient
+	svcErr    error
+	accounts  []common.Account
 	name      string
 	services  []common.ServiceType
 }
@@ -77,7 +80,7 @@ func (f *fakeProvider) GetCredentials() (provider.Credentials, error) {
 }
 func (f *fakeProvider) ValidateCredentials(_ context.Context) error { return nil }
 func (f *fakeProvider) GetAccounts(_ context.Context) ([]common.Account, error) {
-	return nil, nil
+	return f.accounts, nil
 }
 func (f *fakeProvider) GetRegions(_ context.Context) ([]common.Region, error) {
 	return nil, nil
@@ -87,7 +90,10 @@ func (f *fakeProvider) GetSupportedServices() []common.ServiceType {
 	return f.services
 }
 func (f *fakeProvider) GetServiceClient(_ context.Context, _ common.ServiceType, _ string) (provider.ServiceClient, error) {
-	return nil, nil
+	if f.svc != nil {
+		return f.svc, f.svcErr
+	}
+	return &fakeServiceClient{}, f.svcErr
 }
 func (f *fakeProvider) GetRecommendationsClient(_ context.Context) (provider.RecommendationsClient, error) {
 	return f.recClient, f.recErr

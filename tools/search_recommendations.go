@@ -40,7 +40,11 @@ const searchRecommendationsDescription = "Search for reserved-capacity purchase 
 	"one or more Cost Explorer requests (up to 6 when term_years and payment_option are both omitted, more " +
 	"with pagination), and AWS bills those per request, so avoid re-running the same search in a loop. Use " +
 	"this first to find what to buy, then feed a result's region/resource_type/count into the matching " +
-	"cudly_<provider>_<product>_<action>_purchase tool."
+	"cudly_<provider>_<product>_<action>_purchase tool. Results are checked against commitments bought in " +
+	"the last 24 hours in the credentials' own account: a fully covered RDS, OpenSearch, Redshift or " +
+	"ElastiCache recommendation is removed and listed under dedupe.suppressed; EC2, Azure, GCP and MemoryDB " +
+	"recommendations that may be covered stay in the results and are listed under dedupe.flagged " +
+	"(possibly_covered). Check dedupe before acting. A failure to list existing commitments fails the search."
 
 // searchRecommendationsArgs mirrors common.RecommendationParams, adding the
 // provider selector and the optional per-call credential overrides from the
@@ -65,6 +69,7 @@ type searchRecommendationsArgs struct {
 
 // searchRecommendationsResult is the tool's structured output.
 type searchRecommendationsResult struct {
+	Dedupe          searchDedupe            `json:"dedupe"`
 	Recommendations []common.Recommendation `json:"recommendations"`
 	Count           int                     `json:"count"`
 }
@@ -153,7 +158,12 @@ func (t *searchRecommendationsTool) handle(ctx context.Context, _ *mcp.CallToolR
 		return nil, searchRecommendationsResult{}, err
 	}
 
-	return nil, searchRecommendationsResult{Count: len(recs), Recommendations: recs}, nil
+	recs, dedupe, err := dedupeSearchResults(ctx, prov, recs)
+	if err != nil {
+		return nil, searchRecommendationsResult{}, err
+	}
+
+	return nil, searchRecommendationsResult{Count: len(recs), Recommendations: recs, Dedupe: dedupe}, nil
 }
 
 // searchCombo is one (term, payment option) pair to query. Cost Explorer's
