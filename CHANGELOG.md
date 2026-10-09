@@ -5,6 +5,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Changed
+
+- `cudly_search_recommendations` now checks results against commitments bought
+  in the last 24 hours and returns a `dedupe` block: fully covered RDS,
+  OpenSearch, Redshift and ElastiCache recommendations are suppressed and
+  listed, possibly covered EC2, Azure, GCP and MemoryDB ones are flagged.
+  The search now needs permission to list existing commitments and fails
+  loudly, naming it, when it cannot.
+
 ### Breaking
 
 - **Real purchases now require operator spend caps.** With

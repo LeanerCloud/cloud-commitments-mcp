@@ -117,9 +117,8 @@ func TestGCPComputeEnginePurchaseReportsExplicitZeroCost(t *testing.T) {
 // FilterRecommendationsForRecentCommitments, so this recommendation passed
 // through; at a32fd1a the family pool match filters it.
 //
-// Deliberately NOT protocol-level: this consumer has no dedupe path of its
-// own (nothing here imports pkg/recfilter outside this test); the wiring gap
-// is tracked as issue #42.
+// This pins the library boundary; the search tool's own use of the checker
+// is covered in search_dedupe_test.go.
 func TestGCPComputeEngineDedupeDefersFamilyWithRecentCUD(t *testing.T) {
 	ctx := context.Background()
 
