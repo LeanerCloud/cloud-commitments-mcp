@@ -34,6 +34,10 @@ const awsSavingsPlansPurchaseDescription = "Purchase an AWS Savings Plan (Comput
 // SageMaker, and Database plans are global, and cmd/multi_service_helpers.go
 // already establishes this same "single query, us-east-1" convention for
 // account-level Savings Plans recommendations.
+// savingsPlanHoursPerYear is 365 days of hours, matching
+// providers/aws/services/savingsplans hoursInTerm.
+const savingsPlanHoursPerYear = 24 * 365
+
 const savingsPlansAccountLevelRegion = "us-east-1"
 
 // savingsPlansPurchaseArgs is the input schema for
@@ -49,7 +53,7 @@ type savingsPlansPurchaseArgs struct {
 	Region           string  `json:"region,omitempty" jsonschema:"AWS region; required for sp_type=EC2Instance, ignored for account-level plan types"`
 	AWSProfile       string  `json:"aws_profile,omitempty" jsonschema:"AWS named profile override (~/.aws/config); default uses ambient credentials"`
 	IdempotencyNonce string  `json:"idempotency_nonce,omitempty" jsonschema:"optional; set to a fresh value to authorize a purchase that is otherwise identical to a previous one (e.g. buy 3 more RIs with the same parameters); leave empty (the default) so retries with identical parameters dedupe and never double-buy"`
-	HourlyCommitment float64 `json:"hourly_commitment" jsonschema:"USD/hour commitment amount, must be > 0"`
+	HourlyCommitment float64 `json:"hourly_commitment" jsonschema:"USD/hour commitment amount, must be > 0; real purchases are capped by the operator (CUDLY_MCP_MAX_HOURLY_COMMITMENT)"`
 	TermYears        int     `json:"term_years" jsonschema:"commitment length in years"`
 }
 
@@ -229,6 +233,10 @@ func savingsPlanRecommendationFromArgs(args savingsPlansPurchaseArgs) (rec commo
 		Term:           term.RecommendationTerm(),
 		PaymentOption:  string(paymentOption),
 		Details:        details,
+		// Total commitment over the term, computed locally (no provider call)
+		// with the 365-day year the savingsplans client also uses. Lets the
+		// offline preview show a price for this dollar-denominated product.
+		CommitmentCost: args.HourlyCommitment * savingsPlanHoursPerYear * float64(term),
 	}
 
 	dryRun, confirm = ResolveDryRunConfirm(args.DryRun, args.Confirm)

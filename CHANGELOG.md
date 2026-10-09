@@ -5,6 +5,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Breaking
+
+- **Real purchases now require operator spend caps.** With
+  `CUDLY_MCP_ENABLE_REAL_PURCHASES=1`, every real purchase is refused unless
+  the relevant cap is set to a valid value: `CUDLY_MCP_MAX_COUNT` (RIs, and
+  vCPUs for GCP CUDs), `CUDLY_MCP_MAX_HOURLY_COMMITMENT` (Savings Plans) and
+  `CUDLY_MCP_MAX_MEMORY_GB` (GCP CUDs). Caps are per call and are not USD
+  caps. The MCPB bundle exposes them as optional settings. Previews are
+  unaffected. Savings Plan previews now report `cost` (total commitment over
+  the term), and Savings Plan audit lines now carry that figure as the
+  estimated cost.
+
 ### Notices
 
 - **Federation IaC bundles downloaded before 2026-04-22 need to be

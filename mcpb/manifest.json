@@ -13,7 +13,10 @@
   },
   "license": "OSL-3.0",
   "compatibility": {
-    "platforms": ["darwin", "linux"]
+    "platforms": [
+      "darwin",
+      "linux"
+    ]
   },
   "server": {
     "type": "binary",
@@ -22,21 +25,30 @@
       "command": "${__dirname}/server/linux-launch.sh",
       "args": [],
       "env": {
-        "CUDLY_MCP_ENABLE_REAL_PURCHASES": "${user_config.enable_real_purchases}"
+        "CUDLY_MCP_ENABLE_REAL_PURCHASES": "${user_config.enable_real_purchases}",
+        "CUDLY_MCP_MAX_COUNT": "${user_config.max_count}",
+        "CUDLY_MCP_MAX_HOURLY_COMMITMENT": "${user_config.max_hourly_commitment}",
+        "CUDLY_MCP_MAX_MEMORY_GB": "${user_config.max_memory_gb}"
       },
       "platform_overrides": {
         "darwin": {
           "command": "${__dirname}/server/darwin-launch.sh",
           "args": [],
           "env": {
-            "CUDLY_MCP_ENABLE_REAL_PURCHASES": "${user_config.enable_real_purchases}"
+            "CUDLY_MCP_ENABLE_REAL_PURCHASES": "${user_config.enable_real_purchases}",
+            "CUDLY_MCP_MAX_COUNT": "${user_config.max_count}",
+            "CUDLY_MCP_MAX_HOURLY_COMMITMENT": "${user_config.max_hourly_commitment}",
+            "CUDLY_MCP_MAX_MEMORY_GB": "${user_config.max_memory_gb}"
           }
         },
         "linux": {
           "command": "${__dirname}/server/linux-launch.sh",
           "args": [],
           "env": {
-            "CUDLY_MCP_ENABLE_REAL_PURCHASES": "${user_config.enable_real_purchases}"
+            "CUDLY_MCP_ENABLE_REAL_PURCHASES": "${user_config.enable_real_purchases}",
+            "CUDLY_MCP_MAX_COUNT": "${user_config.max_count}",
+            "CUDLY_MCP_MAX_HOURLY_COMMITMENT": "${user_config.max_hourly_commitment}",
+            "CUDLY_MCP_MAX_MEMORY_GB": "${user_config.max_memory_gb}"
           }
         }
       }
@@ -48,6 +60,27 @@
       "title": "Enable real purchases",
       "description": "DANGER: turns on cudly-mcp's ability to execute REAL, money-spending cloud purchases (AWS Reserved Instances, Savings Plans, Azure Reservations, GCP CUDs) when a client explicitly requests dry_run=false and confirm=true. Leave this off until you have exercised the dry-run path and are ready to let it spend real money.",
       "default": false,
+      "required": false
+    },
+    "max_count": {
+      "type": "number",
+      "title": "Maximum count per purchase call",
+      "description": "Per-call ceiling on instances/nodes (or vCPUs for GCP CUDs) for a real purchase. Required before any real purchase: leave it empty and purchases are refused. Applies per call, not cumulatively, and is not a USD cap.",
+      "min": 1,
+      "required": false
+    },
+    "max_hourly_commitment": {
+      "type": "number",
+      "title": "Maximum hourly commitment (USD/hour)",
+      "description": "Per-call ceiling on a Savings Plan hourly commitment. Required before any real Savings Plan purchase. Applies per call, not cumulatively.",
+      "min": 1,
+      "required": false
+    },
+    "max_memory_gb": {
+      "type": "number",
+      "title": "Maximum committed memory (GB)",
+      "description": "Per-call ceiling on memory for a GCP CUD. Required before any real GCP CUD purchase. Applies per call, not cumulatively.",
+      "min": 1,
       "required": false
     }
   },
