@@ -6,7 +6,7 @@ Every purchase tool is dry-run by default (`dry_run=true`) and requires an expli
 
 ## Install
 
-Use Go 1.26.6, as declared by this module. The shared Go modules are published and pinned in `go.mod`, so this checkout builds on its own. From this checkout:
+Use Go 1.26.9, as declared by this module. The shared Go modules are published and pinned in `go.mod`, so this checkout builds on its own. From this checkout:
 
 ```bash
 make build
