@@ -29,15 +29,15 @@ const awsSavingsPlansPurchaseDescription = "Purchase an AWS Savings Plan (Comput
 	"payment_option=no-upfront; AWS does not offer a 3-year Database Savings Plan or all-upfront/" +
 	"partial-upfront billing for it."
 
+// savingsPlanHoursPerYear is 365 days of hours, matching
+// providers/aws/services/savingsplans hoursInTerm.
+const savingsPlanHoursPerYear = 24 * 365
+
 // savingsPlansAccountLevelRegion is the region used to resolve the account-
 // level Savings Plans service client when the caller omits region -- Compute,
 // SageMaker, and Database plans are global, and cmd/multi_service_helpers.go
 // already establishes this same "single query, us-east-1" convention for
 // account-level Savings Plans recommendations.
-// savingsPlanHoursPerYear is 365 days of hours, matching
-// providers/aws/services/savingsplans hoursInTerm.
-const savingsPlanHoursPerYear = 24 * 365
-
 const savingsPlansAccountLevelRegion = "us-east-1"
 
 // savingsPlansPurchaseArgs is the input schema for
