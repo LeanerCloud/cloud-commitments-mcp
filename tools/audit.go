@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -33,16 +34,19 @@ const EnvAuditLog = "CUDLY_MCP_AUDIT_LOG"
 // lifetime, matching how a single CLI invocation shares one run.
 var auditRunID = uuid.NewString()
 
-// auditStatusSuccess, auditStatusError, and auditStatusSkipped are the three
-// statuses this server ever writes. A dry run is skipped; a provider result
-// is successful only when Success is true and Error is nil; every other
-// provider outcome is an error. The fourth status common.NewAuditRecord
+// auditStatusSuccess, auditStatusError, auditStatusUnknown and
+// auditStatusSkipped are the statuses this server ever writes. A dry run is
+// skipped; a provider result is successful only when Success is true and
+// Error is nil; a failure wrapping common.ErrOutcomeUnknown is unknown (the
+// request may have reached the cloud and the commitment may exist); every
+// other provider outcome is an error. The fourth status common.NewAuditRecord
 // documents, "skipped_covered", belongs to the CLI's recent-duplicate guard,
 // which this server does not run yet.
 const (
 	auditStatusSuccess = "success"
 	auditStatusError   = "error"
 	auditStatusSkipped = "skipped"
+	auditStatusUnknown = "unknown"
 )
 
 // auditStatusFor maps a provider PurchaseResult to the audit status it
@@ -51,6 +55,15 @@ const (
 func auditStatusFor(result common.PurchaseResult) string {
 	if purchaseSucceeded(result) {
 		return auditStatusSuccess
+	}
+	return auditStatusForError(result.Error)
+}
+
+// auditStatusForError maps a failed purchase's error to an audit status. The
+// sentinel is matched with errors.Is, never by message text.
+func auditStatusForError(err error) string {
+	if errors.Is(err, common.ErrOutcomeUnknown) {
+		return auditStatusUnknown
 	}
 	return auditStatusError
 }

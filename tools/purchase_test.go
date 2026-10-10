@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -1267,4 +1268,61 @@ func TestRequireCredentialScopeGCPMessageIsActionable(t *testing.T) {
 		assert.Containsf(t, err.Error(), tc.envVar,
 			"provider %q has an ambient fallback and must name it", tc.provider)
 	}
+}
+
+// TestExecutePurchaseAuditStatusForOutcomeUnknown pins the audit status of a
+// failed purchase: only an error wrapping common.ErrOutcomeUnknown is
+// "unknown", matched by errors.Is and never by message text. Not parallel: it
+// swaps the standard logger and the audit path.
+func TestExecutePurchaseAuditStatusForOutcomeUnknown(t *testing.T) {
+	run := func(t *testing.T, fake *fakeServiceClient) (status, stderr string) {
+		t.Helper()
+		path := filepath.Join(t.TempDir(), "audit.jsonl")
+		t.Setenv(EnvAuditLog, path)
+		stderr = captureStandardLogger(t, func() {
+			_, _ = ExecutePurchase(context.Background(), PurchaseRequest{
+				Region: "us-east-1", Recommendation: testRecommendation(), Confirm: true, CredentialScope: "scope",
+				ResolveClient: func(_ context.Context) (provider.ServiceClient, error) { return fake, nil },
+			})
+		})
+		lines := readAuditLines(t, path)
+		require.Len(t, lines, 1)
+		var rec struct {
+			Status string `json:"status"`
+		}
+		require.NoError(t, json.Unmarshal([]byte(lines[0]), &rec))
+		return rec.Status, stderr
+	}
+
+	t.Run("a deep-wrapped sentinel returned as the error is unknown", func(t *testing.T) {
+		wrapped := fmt.Errorf("purchase failed: %w", fmt.Errorf("send: %w", common.ErrOutcomeUnknown))
+		status, stderr := run(t, &fakeServiceClient{purchaseErr: wrapped})
+		assert.Equal(t, auditStatusUnknown, status)
+		assert.Contains(t, stderr, "mcp purchase OUTCOME UNKNOWN")
+	})
+
+	t.Run("a sentinel in result.Error is unknown", func(t *testing.T) {
+		fake := &fakeServiceClient{purchaseResult: common.PurchaseResult{
+			Error: fmt.Errorf("purchase response was empty: %w", common.ErrOutcomeUnknown),
+		}}
+		status, stderr := run(t, fake)
+		assert.Equal(t, auditStatusUnknown, status)
+		assert.Contains(t, stderr, "mcp purchase OUTCOME UNKNOWN")
+	})
+
+	t.Run("a plain error is error", func(t *testing.T) {
+		status, stderr := run(t, &fakeServiceClient{purchaseErr: errors.New("insufficient capacity")})
+		assert.Equal(t, auditStatusError, status)
+		assert.Contains(t, stderr, "mcp purchase FAILED")
+	})
+
+	t.Run("the sentinel's text without the sentinel is error", func(t *testing.T) {
+		status, _ := run(t, &fakeServiceClient{purchaseErr: errors.New("purchase outcome unknown")})
+		assert.Equal(t, auditStatusError, status, "the status must not depend on message text")
+	})
+
+	t.Run("a success is success", func(t *testing.T) {
+		status, _ := run(t, &fakeServiceClient{purchaseResult: common.PurchaseResult{Success: true, CommitmentID: "ri-1"}})
+		assert.Equal(t, auditStatusSuccess, status)
+	})
 }
