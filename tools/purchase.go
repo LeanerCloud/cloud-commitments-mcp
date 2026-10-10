@@ -553,8 +553,12 @@ func logPurchaseOutcome(rec common.Recommendation, token, commitmentID string, s
 		if err == nil {
 			err = errors.New(providerFailureWithoutDetail)
 		}
-		log.Printf("mcp purchase FAILED: provider=%s resource=%s token=%s: %v",
-			rec.Provider, rec.ResourceType, common.MaskToken(token), err)
+		label := "FAILED"
+		if errors.Is(err, common.ErrOutcomeUnknown) {
+			label = "OUTCOME UNKNOWN"
+		}
+		log.Printf("mcp purchase %s: provider=%s resource=%s token=%s: %v",
+			label, rec.Provider, rec.ResourceType, common.MaskToken(token), err)
 		return
 	}
 	log.Printf("mcp purchase OK: provider=%s resource=%s count=%d commitment_id=%s token=%s",
@@ -647,7 +651,7 @@ func ExecutePurchase(ctx context.Context, req PurchaseRequest) (*PurchaseRespons
 	result, err := client.PurchaseCommitment(ctx, rec, opts)
 	if err != nil {
 		logPurchaseOutcome(rec, token, "", false, err)
-		recordPurchaseAudit(rec, req.CredentialScope, common.PurchaseResult{Error: err}, auditStatusError, false)
+		recordPurchaseAudit(rec, req.CredentialScope, common.PurchaseResult{Error: err}, auditStatusForError(err), false)
 		// Full provider error text surfaces to the caller (feedback:
 		// providers must never swallow the underlying SDK/HTTP error).
 		return nil, fmt.Errorf("purchase commitment failed: %w", err)

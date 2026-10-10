@@ -7,6 +7,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- The purchase audit log records a new status, `unknown`, for a purchase that
+  failed with `common.ErrOutcomeUnknown` (a lost EC2 or Redshift response: the
+  commitment may exist). The stderr line reads `OUTCOME UNKNOWN`. Consumers
+  of the JSONL that switch on `status` must handle the new value.
 - `cudly_search_recommendations` now checks results against commitments bought
   in the last 24 hours and returns a `dedupe` block: fully covered RDS,
   OpenSearch, Redshift and ElastiCache recommendations are suppressed and
