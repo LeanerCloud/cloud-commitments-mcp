@@ -51,6 +51,27 @@
           "isRequired": false,
           "isSecret": false,
           "format": "string"
+        },
+        {
+          "name": "ARCHERA_API_KEY",
+          "description": "Archera API key for the read-only cudly_archera_comparison tool. Unset (the default) disables that tool: calls return an error and send no request. The key is sent only as the x-api-key header to https://api.archera.ai.",
+          "isRequired": false,
+          "isSecret": true,
+          "format": "string"
+        },
+        {
+          "name": "ARCHERA_ORG_ID",
+          "description": "Archera organization UUID for cudly_archera_comparison. Required together with ARCHERA_API_KEY and ARCHERA_PLAN_ID.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        },
+        {
+          "name": "ARCHERA_PLAN_ID",
+          "description": "Archera commitment plan UUID for cudly_archera_comparison. Required together with ARCHERA_API_KEY and ARCHERA_ORG_ID.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
         }
       ]
     }

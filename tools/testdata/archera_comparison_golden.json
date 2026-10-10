@@ -1,0 +1,188 @@
+{
+ "basis_note": "Monthly figures are 730-hour monthly rates; the Archera premium is already included in commitment cost totals; upfront figures are one-time amounts and are never summed with monthly rates.",
+ "currency": null,
+ "currency_note": "currency not provided by Archera",
+ "current": {
+  "monthly_730h_archera_premium": "3.03",
+  "monthly_730h_cloud_provider_cost": "2.02",
+  "monthly_730h_commitment_cost_total": "1.01",
+  "monthly_730h_covered_on_demand_cost": "6.06",
+  "monthly_730h_gross_savings": "5.05",
+  "monthly_730h_net_savings": "4.04",
+  "upfront_one_time_cost": "7.07"
+ },
+ "delta_basis_note": "Hypothetical deltas compare against the current plan, not against on-demand.",
+ "fetched_at": "FETCHED_AT",
+ "hypotheticals": [
+  {
+   "contract_term": "one_year",
+   "delta_vs_current": {
+    "monthly_730h_commitment_cost": "16.16",
+    "monthly_730h_net_savings": "15.15",
+    "upfront_one_time_cost": "17.17"
+   },
+   "line_items": [
+    {
+     "actual_commitment_type": "[31mHOSTILE_ACTCT_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+     "actual_payment_option": "partial_upfront",
+     "actual_term": "three_year",
+     "line_item_id": "[31mHOSTILE_HYPLI_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+     "reason": "fallback_closest_shorter"
+    },
+    {
+     "actual_commitment_type": null,
+     "actual_payment_option": null,
+     "actual_term": null,
+     "line_item_id": "22222222-2222-4222-8222-222222222222",
+     "reason": "bundle_member"
+    }
+   ],
+   "payment_option": "all_upfront",
+   "totals": {
+    "monthly_730h_archera_premium": "10.1",
+    "monthly_730h_cloud_provider_cost": "9.09",
+    "monthly_730h_commitment_cost_total": "8.08",
+    "monthly_730h_covered_on_demand_cost": "13.13",
+    "monthly_730h_gross_savings": "12.12",
+    "monthly_730h_net_savings": "11.11",
+    "upfront_one_time_cost": "14.14"
+   }
+  },
+  {
+   "contract_term": null,
+   "delta_vs_current": {
+    "monthly_730h_commitment_cost": "0.375",
+    "monthly_730h_net_savings": "-0.125",
+    "upfront_one_time_cost": "0"
+   },
+   "line_items": [],
+   "payment_option": "no_upfront",
+   "totals": {
+    "monthly_730h_archera_premium": null,
+    "monthly_730h_cloud_provider_cost": null,
+    "monthly_730h_commitment_cost_total": null,
+    "monthly_730h_covered_on_demand_cost": null,
+    "monthly_730h_gross_savings": null,
+    "monthly_730h_net_savings": null,
+    "upfront_one_time_cost": "18.18"
+   }
+  }
+ ],
+ "non_gating_disclosure": "This is entirely optional. CUDly's purchase and management features work fully without Archera.",
+ "plan_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+ "premium_included": true,
+ "rows": [
+  {
+   "candidates": [
+    {
+     "archera_offer_name": "[31mHOSTILE_NAME_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+     "archera_offer_name_note": "Archera's name for this offer; a plan comparison is a hypothetical rollup, not a bindable quote, and an insured target is subject to Archera underwriting allowances, not a guarantee.",
+     "archera_product_support": {
+      "customer_eligibility": "unknown",
+      "status": "unknown",
+      "underwriting_allowance": "unknown"
+     },
+     "breakeven_days": "33.33",
+     "commitment_type": "[31mHOSTILE_CT_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+     "contract_term": "three_year",
+     "delta_vs_current": {
+      "breakeven_days": "44.44",
+      "discount_rate": "43.43",
+      "monthly_730h_net_savings": "41.41",
+      "upfront_one_time_cost": "42.42"
+     },
+     "discount_rate": "32.32",
+     "is_current": false,
+     "lease_attached": true,
+     "lease_menu_item_id": "[31mHOSTILE_LEASE_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+     "monthly": {
+      "monthly_730h_archera_premium": "37.37",
+      "monthly_730h_cloud_provider_cost": "36.36",
+      "monthly_730h_commitment_cost_total": "35.35",
+      "monthly_730h_covered_on_demand_cost": "40.4",
+      "monthly_730h_gross_savings": "39.39",
+      "monthly_730h_net_savings": "38.38"
+     },
+     "offer_id": "[31mHOSTILE_OFFERID_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+     "payment_option": "all_upfront",
+     "provider": "gcp",
+     "region": "[31mHOSTILE_REGION_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+     "upfront_one_time_cost": "34.34"
+    },
+    {
+     "archera_product_support": {
+      "customer_eligibility": "unknown",
+      "evidence": "AWS Savings Plans table, \"Compute Savings Plan\": Guaranteed terms \"30 day, 1 year\". Mapping of API type \"aws/savingsplan/Compute\" to page service \"Compute Savings Plan\" is inferred from the schema example; not stated by Archera.",
+      "source": "https://docs.archera.ai/help-center/getting-started/supported-reservable-services",
+      "status": "supported",
+      "underwriting_allowance": "unknown"
+     },
+     "breakeven_days": null,
+     "commitment_type": "aws/savingsplan/Compute",
+     "contract_term": null,
+     "delta_vs_current": {
+      "breakeven_days": null,
+      "discount_rate": "0.25",
+      "monthly_730h_net_savings": "-2.5",
+      "upfront_one_time_cost": "0.5"
+     },
+     "discount_rate": "0.875",
+     "is_current": false,
+     "lease_attached": false,
+     "lease_menu_item_id": null,
+     "monthly": {
+      "monthly_730h_archera_premium": null,
+      "monthly_730h_cloud_provider_cost": null,
+      "monthly_730h_commitment_cost_total": null,
+      "monthly_730h_covered_on_demand_cost": null,
+      "monthly_730h_gross_savings": null,
+      "monthly_730h_net_savings": null
+     },
+     "offer_id": "offer-c2",
+     "payment_option": null,
+     "provider": "aws",
+     "region": null,
+     "upfront_one_time_cost": "0"
+    }
+   ],
+   "current": {
+    "archera_product_support": {
+     "customer_eligibility": "unknown",
+     "evidence": "AWS Reserved Instances table, service \"EC2\": Guaranteed terms \"30 day, 1 year\". Mapping of API type \"aws/AmazonEC2\" to page service \"EC2\" is inferred from the schema example; not stated by Archera.",
+     "source": "https://docs.archera.ai/help-center/getting-started/supported-reservable-services",
+     "status": "supported",
+     "underwriting_allowance": "unknown"
+    },
+    "breakeven_days": "20.2",
+    "commitment_type": "aws/AmazonEC2",
+    "contract_term": "one_year",
+    "delta_vs_current": {
+     "breakeven_days": "31.31",
+     "discount_rate": "30.3",
+     "monthly_730h_net_savings": "28.28",
+     "upfront_one_time_cost": "29.29"
+    },
+    "discount_rate": "19.19",
+    "is_current": true,
+    "lease_attached": false,
+    "lease_menu_item_id": null,
+    "monthly": {
+     "monthly_730h_archera_premium": "24.24",
+     "monthly_730h_cloud_provider_cost": "23.23",
+     "monthly_730h_commitment_cost_total": "22.22",
+     "monthly_730h_covered_on_demand_cost": "27.27",
+     "monthly_730h_gross_savings": "26.26",
+     "monthly_730h_net_savings": "25.25"
+    },
+    "offer_id": "offer-cur",
+    "payment_option": "no_upfront",
+    "provider": "aws",
+    "region": "eu-west-1",
+    "upfront_one_time_cost": "21.21"
+   },
+   "line_item_id": "[31mHOSTILE_ROWLI_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  }
+ ],
+ "sponsorship_disclosure": "For full disclosure, Archera sponsors CUDly's Open Source development from a fraction of their insurance premiums.",
+ "title": "Archera commitment plan comparison (read-only)"
+}
