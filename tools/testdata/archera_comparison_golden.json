@@ -23,10 +23,10 @@
    },
    "line_items": [
     {
-     "actual_commitment_type": "aws/savingsplan/Compute",
+     "actual_commitment_type": "[31mHOSTILE_ACTCT_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
      "actual_payment_option": "partial_upfront",
      "actual_term": "three_year",
-     "line_item_id": "11111111-1111-4111-8111-111111111111",
+     "line_item_id": "[31mHOSTILE_HYPLI_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
      "reason": "fallback_closest_shorter"
     },
     {
@@ -75,7 +75,7 @@
   {
    "candidates": [
     {
-     "archera_offer_name": "Vendor Guaranteed Name",
+     "archera_offer_name": "[31mHOSTILE_NAME_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
      "archera_offer_name_note": "Archera's name for this offer; a plan comparison is a hypothetical rollup, not a bindable quote, and an insured target is subject to Archera underwriting allowances, not a guarantee.",
      "archera_product_support": {
       "customer_eligibility": "unknown",
@@ -83,7 +83,7 @@
       "underwriting_allowance": "unknown"
      },
      "breakeven_days": "33.33",
-     "commitment_type": "cud",
+     "commitment_type": "[31mHOSTILE_CT_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
      "contract_term": "three_year",
      "delta_vs_current": {
       "breakeven_days": "44.44",
@@ -94,7 +94,7 @@
      "discount_rate": "32.32",
      "is_current": false,
      "lease_attached": true,
-     "lease_menu_item_id": "33333333-3333-4333-8333-333333333333",
+     "lease_menu_item_id": "[31mHOSTILE_LEASE_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
      "monthly": {
       "monthly_730h_archera_premium": "37.37",
       "monthly_730h_cloud_provider_cost": "36.36",
@@ -103,10 +103,10 @@
       "monthly_730h_gross_savings": "39.39",
       "monthly_730h_net_savings": "38.38"
      },
-     "offer_id": "offer-c1",
+     "offer_id": "[31mHOSTILE_OFFERID_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
      "payment_option": "all_upfront",
      "provider": "gcp",
-     "region": "europe-west4",
+     "region": "[31mHOSTILE_REGION_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
      "upfront_one_time_cost": "34.34"
     },
     {
@@ -180,7 +180,7 @@
     "region": "eu-west-1",
     "upfront_one_time_cost": "21.21"
    },
-   "line_item_id": "11111111-1111-4111-8111-111111111111"
+   "line_item_id": "[31mHOSTILE_ROWLI_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
   }
  ],
  "sponsorship_disclosure": "For full disclosure, Archera sponsors CUDly's Open Source development from a fraction of their insurance premiums.",

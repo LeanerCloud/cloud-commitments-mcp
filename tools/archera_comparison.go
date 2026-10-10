@@ -155,16 +155,17 @@ func (t *archeraComparisonTool) handle(ctx context.Context, _ *mcp.CallToolReque
 	if err != nil {
 		return nil, archeraComparisonDTO{}, fmt.Errorf("marshal archera comparison: %w", err)
 	}
-	if len(b) > archeraMaxResultBytes {
-		return nil, archeraComparisonDTO{}, fmt.Errorf(
-			"archera comparison result is %d bytes, over the %d byte limit: narrow it with line_item_ids", len(b), archeraMaxResultBytes)
+	if err := archeraCheckSize(len(b)); err != nil {
+		return nil, archeraComparisonDTO{}, err
 	}
 	return nil, *dto, nil
 }
 
 // archeraError reports a vendor failure by status and Retry-After only: the
-// vendor message is dropped. Any other error is passed through with the key
-// masked as a second line of defense behind the library's own redaction.
+// vendor message is dropped. A context error is returned unchanged. Any other
+// error (decode, transport, request validation) can quote vendor values
+// uncapped, so it is key-masked, stripped of control characters and capped at
+// 256 bytes (the go library does not bound it yet: go#336).
 func archeraError(err error, key string) error {
 	var he *insurance.HTTPError
 	if errors.As(err, &he) {
@@ -174,8 +175,20 @@ func archeraError(err error, key string) error {
 		}
 		return fmt.Errorf("archera request failed: HTTP %d; %s", he.StatusCode, retry)
 	}
-	if key != "" && strings.Contains(err.Error(), key) {
-		return errors.New(strings.ReplaceAll(err.Error(), key, "[redacted]"))
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return err
 	}
-	return err
+	msg := err.Error()
+	if key != "" {
+		msg = strings.ReplaceAll(msg, key, "[redacted]")
+	}
+	return errors.New(archeraCleanString(msg))
+}
+
+// archeraCheckSize fails loud when the marshaled result exceeds the cap.
+func archeraCheckSize(n int) error {
+	if n > archeraMaxResultBytes {
+		return fmt.Errorf("archera comparison result is %d bytes, over the %d byte limit: narrow it with line_item_ids", n, archeraMaxResultBytes)
+	}
+	return nil
 }
