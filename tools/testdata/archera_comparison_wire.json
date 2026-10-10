@@ -1,0 +1,183 @@
+{
+ "current_totals": {
+  "commitment_financials_monthly_rate": {
+   "commitment_cost": {
+    "total": 1.01,
+    "breakdown": {
+     "cloud_provider_cost": {
+      "total": 2.02
+     },
+     "archera_premium": 3.03
+    }
+   },
+   "commitment_savings": {
+    "net": 4.04,
+    "gross": 5.05
+   },
+   "covered_ondemand_cost": 6.06
+  },
+  "commitment_upfront_cost": 7.07
+ },
+ "hypothetical_totals": [
+  {
+   "contract_term": "one_year",
+   "payment_option": "all_upfront",
+   "commitment_financials_monthly_rate": {
+    "commitment_cost": {
+     "total": 8.08,
+     "breakdown": {
+      "cloud_provider_cost": {
+       "total": 9.09
+      },
+      "archera_premium": 10.1
+     }
+    },
+    "commitment_savings": {
+     "net": 11.11,
+     "gross": 12.12
+    },
+    "covered_ondemand_cost": 13.13
+   },
+   "commitment_upfront_cost": 14.14,
+   "delta_vs_current": {
+    "monthly_net_savings": 15.15,
+    "monthly_commitment_cost": 16.16,
+    "upfront_cost": 17.17
+   },
+   "line_items": [
+    {
+     "line_item_id": "11111111-1111-4111-8111-111111111111",
+     "actual_term": "three_year",
+     "actual_payment_option": "partial_upfront",
+     "actual_commitment_type": "aws/savingsplan/Compute",
+     "actual_term_reason": "fallback_closest_shorter"
+    },
+    {
+     "line_item_id": "22222222-2222-4222-8222-222222222222",
+     "actual_term": null,
+     "actual_payment_option": null,
+     "actual_commitment_type": null,
+     "actual_term_reason": "bundle_member"
+    }
+   ]
+  },
+  {
+   "contract_term": null,
+   "payment_option": "no_upfront",
+   "commitment_financials_monthly_rate": {},
+   "commitment_upfront_cost": 18.18,
+   "delta_vs_current": {
+    "monthly_net_savings": -0.125,
+    "monthly_commitment_cost": 0.375,
+    "upfront_cost": 0
+   },
+   "line_items": []
+  }
+ ],
+ "data": [
+  {
+   "line_item_id": "11111111-1111-4111-8111-111111111111",
+   "current": {
+    "is_current": true,
+    "offer_id": "offer-cur",
+    "offer": {
+     "provider": "aws",
+     "region": "eu-west-1",
+     "guaranteed_display_name": null
+    },
+    "lease_menu_item_id": null,
+    "commitment_type": "aws/AmazonEC2",
+    "contract_term": "one_year",
+    "payment_option": "no_upfront",
+    "discount_rate": 19.19,
+    "breakeven_days": 20.2,
+    "commitment_upfront_cost": 21.21,
+    "commitment_financials_monthly_rate": {
+     "commitment_cost": {
+      "total": 22.22,
+      "breakdown": {
+       "cloud_provider_cost": {
+        "total": 23.23
+       },
+       "archera_premium": 24.24
+      }
+     },
+     "commitment_savings": {
+      "net": 25.25,
+      "gross": 26.26
+     },
+     "covered_ondemand_cost": 27.27
+    },
+    "delta_vs_current": {
+     "monthly_net_savings": 28.28,
+     "upfront_cost": 29.29,
+     "discount_rate": 30.3,
+     "breakeven_days": 31.31
+    }
+   },
+   "candidates": [
+    {
+     "is_current": false,
+     "offer_id": "offer-c1",
+     "offer": {
+      "provider": "gcp",
+      "region": "europe-west4",
+      "guaranteed_display_name": "Vendor Guaranteed Name"
+     },
+     "lease_menu_item_id": "33333333-3333-4333-8333-333333333333",
+     "commitment_type": "cud",
+     "contract_term": "three_year",
+     "payment_option": "all_upfront",
+     "discount_rate": 32.32,
+     "breakeven_days": 33.33,
+     "commitment_upfront_cost": 34.34,
+     "commitment_financials_monthly_rate": {
+      "commitment_cost": {
+       "total": 35.35,
+       "breakdown": {
+        "cloud_provider_cost": {
+         "total": 36.36
+        },
+        "archera_premium": 37.37
+       }
+      },
+      "commitment_savings": {
+       "net": 38.38,
+       "gross": 39.39
+      },
+      "covered_ondemand_cost": 40.4
+     },
+     "delta_vs_current": {
+      "monthly_net_savings": 41.41,
+      "upfront_cost": 42.42,
+      "discount_rate": 43.43,
+      "breakeven_days": 44.44
+     }
+    },
+    {
+     "is_current": false,
+     "offer_id": "offer-c2",
+     "offer": {
+      "provider": "aws",
+      "region": null,
+      "guaranteed_display_name": null
+     },
+     "lease_menu_item_id": null,
+     "commitment_type": "aws/savingsplan/Compute",
+     "contract_term": null,
+     "payment_option": null,
+     "discount_rate": 0.875,
+     "breakeven_days": null,
+     "commitment_upfront_cost": 0,
+     "commitment_financials_monthly_rate": {},
+     "delta_vs_current": {
+      "monthly_net_savings": -2.5,
+      "upfront_cost": 0.5,
+      "discount_rate": 0.25,
+      "breakeven_days": null
+     }
+    }
+   ]
+  }
+ ]
+}
