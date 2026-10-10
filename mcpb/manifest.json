@@ -28,7 +28,10 @@
         "CUDLY_MCP_ENABLE_REAL_PURCHASES": "${user_config.enable_real_purchases}",
         "CUDLY_MCP_MAX_COUNT": "${user_config.max_count}",
         "CUDLY_MCP_MAX_HOURLY_COMMITMENT": "${user_config.max_hourly_commitment}",
-        "CUDLY_MCP_MAX_MEMORY_GB": "${user_config.max_memory_gb}"
+        "CUDLY_MCP_MAX_MEMORY_GB": "${user_config.max_memory_gb}",
+        "ARCHERA_API_KEY": "${user_config.archera_api_key}",
+        "ARCHERA_ORG_ID": "${user_config.archera_org_id}",
+        "ARCHERA_PLAN_ID": "${user_config.archera_plan_id}"
       },
       "platform_overrides": {
         "darwin": {
@@ -38,7 +41,10 @@
             "CUDLY_MCP_ENABLE_REAL_PURCHASES": "${user_config.enable_real_purchases}",
             "CUDLY_MCP_MAX_COUNT": "${user_config.max_count}",
             "CUDLY_MCP_MAX_HOURLY_COMMITMENT": "${user_config.max_hourly_commitment}",
-            "CUDLY_MCP_MAX_MEMORY_GB": "${user_config.max_memory_gb}"
+            "CUDLY_MCP_MAX_MEMORY_GB": "${user_config.max_memory_gb}",
+            "ARCHERA_API_KEY": "${user_config.archera_api_key}",
+            "ARCHERA_ORG_ID": "${user_config.archera_org_id}",
+            "ARCHERA_PLAN_ID": "${user_config.archera_plan_id}"
           }
         },
         "linux": {
@@ -48,7 +54,10 @@
             "CUDLY_MCP_ENABLE_REAL_PURCHASES": "${user_config.enable_real_purchases}",
             "CUDLY_MCP_MAX_COUNT": "${user_config.max_count}",
             "CUDLY_MCP_MAX_HOURLY_COMMITMENT": "${user_config.max_hourly_commitment}",
-            "CUDLY_MCP_MAX_MEMORY_GB": "${user_config.max_memory_gb}"
+            "CUDLY_MCP_MAX_MEMORY_GB": "${user_config.max_memory_gb}",
+            "ARCHERA_API_KEY": "${user_config.archera_api_key}",
+            "ARCHERA_ORG_ID": "${user_config.archera_org_id}",
+            "ARCHERA_PLAN_ID": "${user_config.archera_plan_id}"
           }
         }
       }
@@ -82,6 +91,28 @@
       "description": "Per-call ceiling on memory for a GCP CUD. Required before any real GCP CUD purchase. Applies per call, not cumulatively.",
       "min": 1,
       "required": false
+    },
+    "archera_api_key": {
+      "type": "string",
+      "title": "Archera API key",
+      "description": "Optional. Enables the read-only Archera plan comparison tool. Sent only to https://api.archera.ai. Leave empty to keep the tool disabled.",
+      "sensitive": true,
+      "required": false,
+      "default": ""
+    },
+    "archera_org_id": {
+      "type": "string",
+      "title": "Archera organization ID",
+      "description": "Optional. Archera organization UUID, used with the API key above.",
+      "required": false,
+      "default": ""
+    },
+    "archera_plan_id": {
+      "type": "string",
+      "title": "Archera commitment plan ID",
+      "description": "Optional. Archera commitment plan UUID to compare, used with the API key above.",
+      "required": false,
+      "default": ""
     }
   },
   "privacy_policies": [

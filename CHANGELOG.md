@@ -5,6 +5,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added
+
+- `cudly_archera_comparison`: a read-only comparison of an Archera commitment
+  plan (current offer and alternatives per line item, plus plan-wide
+  hypotheticals), with exact decimal money, unknown as null, and both Archera
+  disclosures. Off until the operator sets `ARCHERA_API_KEY`, `ARCHERA_ORG_ID`
+  and `ARCHERA_PLAN_ID`; unconfigured calls error and send no request. It
+  reads `https://api.archera.ai` only, never retries, and makes no purchase.
+
 ### Changed
 
 - The purchase audit log records a new status, `unknown`, for a purchase that
