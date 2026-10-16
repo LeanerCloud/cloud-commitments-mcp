@@ -247,9 +247,9 @@ repos:
   #                                     on every push to feat/** (which
   #                                     fires on every PR-branch update).
   #
-  # Moving them to the pre-push stage keeps the local safety net (devs
-  # who run `pre-commit install --hook-type pre-push` still get these
-  # tests on `git push`) while letting the CI pre-commit workflow stay
+  # Moving them to the pre-push stage keeps the local safety net (a plain
+  # `pre-commit install` arms pre-push via default_install_hook_types, so
+  # devs still get these tests on `git push`) while letting the CI pre-commit workflow stay
   # focused on style/security/syntax. Pre-commit's default stage filter
   # is `pre-commit`, so the CI workflow's `pre-commit run --all-files`
   # skips these hooks automatically.
@@ -281,4 +281,5 @@ repos:
 
 # Global configuration
 default_stages: [pre-commit, pre-push]
+default_install_hook_types: [pre-commit, pre-push]
 fail_fast: false
