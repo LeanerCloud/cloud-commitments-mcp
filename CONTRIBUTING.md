@@ -376,17 +376,21 @@ We welcome contributions in these areas:
 
 ### High Priority
 
-- Additional AWS services (Lambda, DynamoDB, etc.)
-- Azure service implementations
-- GCP service implementations
+- MCP tools for commitment types the library already supports but this server does not expose yet
 - Improved error messages and user experience
 
 ### Medium Priority
 
 - Enhanced reporting and analytics
-- Terraform/CloudFormation integration
-- Web UI dashboard
+- Transports beyond stdio (for example streamable HTTP)
 - Performance optimizations
+
+New cloud provider services are implemented in
+[cloud-commitments-go](https://github.com/LeanerCloud/cloud-commitments-go);
+this server then exposes them as tools. Terraform/CloudFormation
+integration and the web dashboard live in
+[cloud-commitments-platform](https://github.com/LeanerCloud/cloud-commitments-platform).
+Contribute those to the repository that owns them, not here.
 
 ### Documentation
 
