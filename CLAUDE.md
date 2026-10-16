@@ -73,8 +73,12 @@ fixing the same thing. The `~/.claude/agent-comms/` bus below only
 coordinates agents on one machine; assignment is what coordinates people.
 
 1. **Pick work in priority order.** Take the highest-priority open issue
-   that nobody owns, oldest first within a priority. Skip anything
-   labelled `status/blocked`, `status/needs-info` or `status/wontdo`:
+   that nobody owns: `priority/p0` through `priority/p3`, then issues with
+   no priority label. Within a level, prefer higher `urgency/*`, then higher
+   `impact/*`, then issues that unblock others, then smaller `effort/*`.
+   Break remaining ties oldest first. Skip anything labelled
+   `status/blocked`, `status/needs-info` or `status/wontdo`, and anything
+   assigned, claimed or already covered by an open PR:
 
    ```bash
    for p in p0 p1 p2 p3; do
