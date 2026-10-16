@@ -28,6 +28,13 @@ cmd.test
 # Output of the go coverage tool
 *.out
 
+# Root-level reports written by Makefile targets (test-coverage,
+# security-scan-go report, complexity-report). Anchored so only the
+# make outputs are ignored.
+/coverage.html
+/gosec-report.json
+/complexity-report.txt
+
 # Log files
 *.log
 
