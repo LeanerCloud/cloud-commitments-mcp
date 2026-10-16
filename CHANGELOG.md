@@ -14,7 +14,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
   and `ARCHERA_PLAN_ID`; unconfigured calls error and send no request. It
   reads `https://api.archera.ai` only, never retries, and makes no purchase.
 
+- `CUDLY_MCP_MAX_COMMITMENT_USD`: a per-call ceiling on the total USD one
+  real purchase commits over its full term, priced from the provider's own
+  offering lookup (Savings Plans: hourly commitment x 8760 x years). USD only;
+  unpriceable purchases are refused.
+
 ### Security
+
+- A small `CUDLY_MCP_MAX_COUNT` no longer admits an enormous purchase (50 x
+  `u-24tb1` is about $286M): the USD cap bounds the real total.
 
 - `cudly_archera_comparison`: a transport error that echoed the API key with
   zero-width, bidi or control characters spliced into it could reassemble the
@@ -48,12 +56,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Breaking
 
+- **`CUDLY_MCP_MAX_COMMITMENT_USD` is now required for every real purchase.**
+  Unset, empty or invalid refuses the purchase before credentials are
+  resolved. The MCPB bundle has a matching setting that must be filled in before any real purchase. Executing a
+  purchase now also needs credentials and network access for the provider's
+  offering lookup.
+- **Real GCP CUD purchases are refused** until the `cloud-commitments-go` pin
+  includes the CUD pricing fix (go#321), because their USD total cannot be
+  determined yet. Previews are unaffected.
+
 - **Real purchases now require operator spend caps.** With
   `CUDLY_MCP_ENABLE_REAL_PURCHASES=1`, every real purchase is refused unless
   the relevant cap is set to a valid value: `CUDLY_MCP_MAX_COUNT` (RIs, and
   vCPUs for GCP CUDs), `CUDLY_MCP_MAX_HOURLY_COMMITMENT` (Savings Plans) and
-  `CUDLY_MCP_MAX_MEMORY_GB` (GCP CUDs). Caps are per call and are not USD
-  caps. The MCPB bundle exposes them as optional settings. Previews are
+  `CUDLY_MCP_MAX_MEMORY_GB` (GCP CUDs). Caps are per call; the count and
+  hourly caps are not USD caps (see `CUDLY_MCP_MAX_COMMITMENT_USD`). The MCPB bundle exposes them as optional settings. Previews are
   unaffected. Savings Plan previews now report `cost` (total commitment over
   the term), and Savings Plan audit lines now carry that figure as the
   estimated cost.

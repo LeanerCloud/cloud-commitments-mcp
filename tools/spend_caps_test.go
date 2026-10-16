@@ -174,6 +174,11 @@ func TestSpendCapCountAcrossEveryCountBearingBuilder(t *testing.T) {
 		atCap := rec
 		atCap.Count = 1000
 		_, _, calls, err = runReal(t, atCap)
+		if name == "gcp" { // real GCP CUD purchases are refused by the USD cap (go#321)
+			require.ErrorContains(t, err, "go#321", name)
+			assert.Zero(t, calls, name)
+			continue
+		}
 		require.NoError(t, err, name)
 		assert.Equal(t, 1, calls, name)
 	}
@@ -194,8 +199,8 @@ func TestSpendCapGCPMemory(t *testing.T) {
 	rec, _, _, _, err = gcpComputeEngineRecommendationFromArgs(args)
 	require.NoError(t, err)
 	_, _, calls, err = runReal(t, rec)
-	require.NoError(t, err)
-	assert.Equal(t, 1, calls)
+	require.ErrorContains(t, err, "go#321", "within the memory cap, the USD cap still refuses GCP CUDs")
+	assert.Zero(t, calls)
 
 	rec.Details = &common.ComputeDetails{MemoryGB: 1}
 	_, _, _, err = runReal(t, rec)

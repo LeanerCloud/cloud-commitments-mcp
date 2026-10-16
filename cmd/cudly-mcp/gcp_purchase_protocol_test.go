@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"sync/atomic"
 	"testing"
@@ -125,11 +124,12 @@ func (p *fakeGCPProvider) GetRecommendationsClient(_ context.Context) (provider.
 // gcpComputeEngineRecommendationFromArgs never sets CommitmentCost, so old
 // and new library pins both yield "cost":0 here. The pin-sensitive cost proof
 // lives at the library boundary (tools/gcp_computeengine_cud_safeguards_test.go).
-func TestGCPComputeEngineCUDPurchaseStructuredCost(t *testing.T) {
+func TestGCPComputeEngineCUDPurchaseRefusedByUSDCap(t *testing.T) {
 	t.Setenv(tools.EnvEnableRealPurchases, "1")
 	t.Setenv(tools.EnvMaxCount, "1000")
 	t.Setenv(tools.EnvMaxHourlyCommitment, "1000")
 	t.Setenv(tools.EnvMaxMemoryGB, "1000")
+	t.Setenv(tools.EnvMaxCommitmentUSD, "1000000000")
 	service := &fakeComputeEngineCommitmentsService{}
 
 	provider.GetRegistry().Unregister("gcp")
@@ -190,21 +190,10 @@ func TestGCPComputeEngineCUDPurchaseStructuredCost(t *testing.T) {
 		},
 	})
 	require.NoError(t, err, "CallTool itself must not return a transport-level error")
-	require.False(t, result.IsError, "a successful fake-backed purchase must not surface as a tool error: %+v", result.Content)
-	require.Equal(t, int32(1), service.insertCalls.Load())
-
-	require.NotNil(t, result.StructuredContent, "structured output must be present")
-	encoded, err := json.Marshal(result.StructuredContent)
-	require.NoError(t, err)
-	var structured map[string]any
-	require.NoError(t, json.Unmarshal(encoded, &structured))
-
-	assert.Equal(t, true, structured["success"], "purchase must report success, got %s", encoded)
-	assert.Equal(t, false, structured["dry_run"], "this was a real purchase, got %s", encoded)
-	// The cost contract is an EXPLICIT zero: PurchaseResponse.Cost is a
-	// *float64 with omitempty, so a nil cost would drop the key entirely; a
-	// known zero upfront charge must survive as "cost":0.
-	cost, present := structured["cost"]
-	require.True(t, present, "structured output must carry an explicit cost field, got %s", encoded)
-	assert.Equal(t, 0.0, cost, "a Compute Engine CUD has no upfront charge, got %s", encoded)
+	// Real GCP CUD purchases are refused until USD totals exist (go#321).
+	require.True(t, result.IsError, "a real GCP CUD purchase must be refused: %+v", result.Content)
+	text, ok := result.Content[0].(*gosdk.TextContent)
+	require.True(t, ok)
+	assert.Contains(t, text.Text, "go#321")
+	require.Equal(t, int32(0), service.insertCalls.Load())
 }

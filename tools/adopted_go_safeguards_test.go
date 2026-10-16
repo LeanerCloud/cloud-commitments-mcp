@@ -89,6 +89,8 @@ func rdsOffering(id, engine string) rdstypes.ReservedDBInstancesOffering {
 		MultiAZ:                       aws.Bool(true),
 		Duration:                      aws.Int32(3 * 365 * 24 * 3600),
 		OfferingType:                  aws.String("No Upfront"),
+		FixedPrice:                    aws.Float64(100),
+		CurrencyCode:                  aws.String("USD"),
 	}
 }
 

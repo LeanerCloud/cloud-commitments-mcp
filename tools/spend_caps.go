@@ -12,8 +12,9 @@ import (
 
 // Operator-set spend caps. They are environment variables, not tool
 // arguments: a cap the model could raise would not bound a hallucinating or
-// prompt-injected model. Each applies PER CALL, not cumulatively, and
-// none is a USD cap: they bound the size of one purchase request.
+// prompt-injected model. Each applies PER CALL, not cumulatively.
+// EnvMaxCommitmentUSD bounds the total USD of one purchase; the others bound
+// its size.
 const (
 	// EnvMaxCount caps rec.Count (instances or nodes; vCPUs for GCP CUDs)
 	// for every non-Savings-Plan real purchase.
@@ -23,6 +24,9 @@ const (
 	// EnvMaxMemoryGB caps the memory committed by a GCP CUD. MaxCount bounds
 	// only vcpu_count, so memory_gb needs its own ceiling.
 	EnvMaxMemoryGB = "CUDLY_MCP_MAX_MEMORY_GB"
+	// EnvMaxCommitmentUSD caps the total USD one purchase commits over its
+	// full term, priced by the provider just before the purchase.
+	EnvMaxCommitmentUSD = "CUDLY_MCP_MAX_COMMITMENT_USD"
 )
 
 // capSetting names one cap for error messages: the environment variable and,
@@ -36,7 +40,10 @@ var (
 	capCount  = capSetting{EnvMaxCount, "Maximum count per purchase call"}
 	capHourly = capSetting{EnvMaxHourlyCommitment, "Maximum hourly commitment (USD/hour)"}
 	capMemory = capSetting{EnvMaxMemoryGB, "Maximum committed memory (GB)"}
+	capUSD    = capSetting{EnvMaxCommitmentUSD, "Maximum commitment per purchase call (USD)"}
 )
+
+func readUSDCap() (float64, error) { return capUSD.readFloat() }
 
 func (c capSetting) unset() error {
 	return fmt.Errorf("refusing real purchase: spend cap %s is not set; set it (Claude Desktop: %q) to the largest value one purchase call may use",

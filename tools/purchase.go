@@ -576,26 +576,32 @@ func logPurchaseOutcome(rec common.Recommendation, token, commitmentID string, s
 // read. Order matters: both the operator opt-in and the credential-scope
 // check run before ResolveClient, so a refusal never resolves credentials or
 // contacts a provider.
-func authorizeRealPurchase(req PurchaseRequest, rec common.Recommendation) error {
+func authorizeRealPurchase(req PurchaseRequest, rec common.Recommendation) (float64, error) {
 	// Operator authorization. See EnvEnableRealPurchases for why the
 	// model-supplied confirm flag alone is not enough.
 	if !realPurchasesEnabled() {
-		return fmt.Errorf("real purchases are disabled: set %s=1 to allow the MCP server to execute real purchases",
+		return 0, fmt.Errorf("real purchases are disabled: set %s=1 to allow the MCP server to execute real purchases",
 			EnvEnableRealPurchases)
 	}
 	// Operator spend ceiling, per call. See enforceSpendCaps.
 	if err := enforceSpendCaps(rec); err != nil {
-		return err
+		return 0, err
+	}
+	// The USD cap is read here, before any credential or network use; the
+	// total itself needs the provider client, so it is checked in ExecutePurchase.
+	usdLimit, err := readUSDCap()
+	if err != nil {
+		return 0, err
 	}
 	// Target account must be determinable. See requireCredentialScope for why
 	// an undeterminable one is a double-purchase hazard, not a cosmetic gap.
 	if err := requireCredentialScope(rec.Provider, req.CredentialScope); err != nil {
-		return err
+		return 0, err
 	}
 	if req.ResolveClient == nil {
-		return fmt.Errorf("internal error: no ResolveClient configured for real purchase")
+		return 0, fmt.Errorf("internal error: no ResolveClient configured for real purchase")
 	}
-	return nil
+	return usdLimit, nil
 }
 
 // ExecutePurchase runs the shared dry_run/confirm safety gate, then every
@@ -631,13 +637,20 @@ func ExecutePurchase(ctx context.Context, req PurchaseRequest) (*PurchaseRespons
 	// against the err declared above, while `err =` trips gocritic's
 	// sloppyReassign. A distinct name satisfies both (same reason as
 	// validateSavingsPlanArgs' commitErr in aws_savingsplans.go).
-	if authErr := authorizeRealPurchase(req, rec); authErr != nil {
+	usdLimit, authErr := authorizeRealPurchase(req, rec)
+	if authErr != nil {
 		return nil, authErr
 	}
 
 	client, err := req.ResolveClient(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("resolve %s service client: %w", rec.Provider, err)
+	}
+
+	// Like a ResolveClient failure, a cap refusal happens before any purchase
+	// attempt and writes no audit record.
+	if _, capErr := enforceUSDCap(ctx, client, rec, usdLimit); capErr != nil {
+		return nil, capErr
 	}
 
 	token := common.DeriveIdempotencyToken(idempotencyKeyFor(req.Region, rec, req.CredentialScope, req.Nonce), 0)
@@ -663,6 +676,11 @@ func ExecutePurchase(ctx context.Context, req PurchaseRequest) (*PurchaseRespons
 	logPurchaseOutcome(rec, token, auditResult.CommitmentID, purchaseSucceeded(auditResult), auditResult.Error)
 	recordPurchaseAudit(rec, req.CredentialScope, auditResult, auditStatusFor(auditResult), false)
 
+	return purchaseResponse(rec, result), nil
+}
+
+// purchaseResponse maps a provider result to the tool response.
+func purchaseResponse(rec common.Recommendation, result common.PurchaseResult) *PurchaseResponse {
 	resp := &PurchaseResponse{
 		Success:           purchaseSucceeded(result),
 		DryRun:            result.DryRun,
@@ -685,5 +703,5 @@ func ExecutePurchase(ctx context.Context, req PurchaseRequest) (*PurchaseRespons
 	if purchaseSucceeded(result) {
 		resp.Archera = archeraOffer()
 	}
-	return resp, nil
+	return resp
 }

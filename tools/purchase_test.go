@@ -45,7 +45,7 @@ func TestMain(m *testing.M) {
 	// Generous default caps so suites that predate the spend ceiling keep
 	// exercising what happens once a purchase is authorized. The cap tests
 	// override these (non-parallel) per case.
-	for env, v := range map[string]string{EnvMaxCount: "1000000", EnvMaxHourlyCommitment: "1000000", EnvMaxMemoryGB: "1000000"} {
+	for env, v := range map[string]string{EnvMaxCount: "1000000", EnvMaxHourlyCommitment: "1000000", EnvMaxMemoryGB: "1000000", EnvMaxCommitmentUSD: "1000000000"} {
 		if err := os.Setenv(env, v); err != nil {
 			log.Printf("set %s for MCP tests: %v", env, err)
 			os.Exit(1)
@@ -76,10 +76,13 @@ func TestMain(m *testing.M) {
 // PurchaseCommitment is exercised by these tests; the rest of the interface
 // is implemented trivially to satisfy the type.
 type fakeServiceClient struct {
-	purchaseResult common.PurchaseResult
 	purchaseErr    error
+	offeringErr    error
+	offering       *common.OfferingDetails
+	purchaseResult common.PurchaseResult
 	lastOpts       common.PurchaseOptions
 	purchaseCalls  int
+	offeringCalls  int
 }
 
 func (f *fakeServiceClient) GetServiceType() common.ServiceType { return common.ServiceEC2 }
@@ -100,7 +103,11 @@ func (f *fakeServiceClient) ValidateOffering(_ context.Context, _ common.Recomme
 	return nil
 }
 func (f *fakeServiceClient) GetOfferingDetails(_ context.Context, _ common.Recommendation) (*common.OfferingDetails, error) {
-	return nil, nil
+	f.offeringCalls++
+	if f.offering == nil && f.offeringErr == nil {
+		return &common.OfferingDetails{TotalCost: 1, Currency: "USD"}, nil
+	}
+	return f.offering, f.offeringErr
 }
 func (f *fakeServiceClient) GetValidResourceTypes(_ context.Context) ([]string, error) {
 	return nil, nil

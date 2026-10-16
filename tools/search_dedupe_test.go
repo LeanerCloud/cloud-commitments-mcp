@@ -40,10 +40,10 @@ var dedupeRecent = time.Now().Add(-time.Hour)
 // listingClient is a ServiceClient whose existing-commitment listing is
 // scripted and counted.
 type listingClient struct {
-	err error
-	fakeServiceClient
+	err         error
 	commitments []common.Commitment
-	listCalls   int
+	fakeServiceClient
+	listCalls int
 }
 
 func (l *listingClient) GetExistingCommitments(_ context.Context) ([]common.Commitment, error) {

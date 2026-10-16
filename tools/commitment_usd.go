@@ -11,9 +11,6 @@ import (
 	"github.com/LeanerCloud/cloud-commitments-go/pkg/provider"
 )
 
-// usdCapEnv names the cap in refusal messages.
-const usdCapEnv = "CUDLY_MCP_MAX_COMMITMENT_USD"
-
 // committedUSD returns the total USD a purchase commits over the full term.
 // Anything it cannot price with confidence is an error, never zero.
 func committedUSD(ctx context.Context, client provider.ServiceClient, rec common.Recommendation) (float64, error) {
@@ -21,11 +18,11 @@ func committedUSD(ctx context.Context, client provider.ServiceClient, rec common
 	case rec.CommitmentType == common.CommitmentSavingsPlan:
 		return savingsPlanUSD(rec)
 	case rec.Provider == common.ProviderGCP || rec.CommitmentType == common.CommitmentCUD:
-		return 0, errors.New("USD totals for GCP committed-use discounts are unavailable at the pinned cloud-commitments-go (go#321), so real GCP CUD purchases are refused")
+		return 0, errors.New("refusing real purchase: USD totals for GCP committed-use discounts are unavailable at the pinned cloud-commitments-go (go#321), so real GCP CUD purchases are refused")
 	}
 	od, err := client.GetOfferingDetails(ctx, rec)
 	if err != nil {
-		return 0, fmt.Errorf("cannot determine USD total: %w", err)
+		return 0, fmt.Errorf("refusing real purchase: cannot determine USD total: %w", err)
 	}
 	return unitOfferingUSD(od, rec.Count)
 }
@@ -35,15 +32,15 @@ func committedUSD(ctx context.Context, client provider.ServiceClient, rec common
 func savingsPlanUSD(rec common.Recommendation) (float64, error) {
 	details, ok := rec.Details.(*common.SavingsPlanDetails)
 	if !ok || details == nil {
-		return 0, errors.New("cannot determine USD total: savings plan details are missing")
+		return 0, errors.New("refusing real purchase: cannot determine USD total: savings plan details are missing")
 	}
 	hourly := details.HourlyCommitment
 	if math.IsNaN(hourly) || math.IsInf(hourly, 0) || hourly <= 0 {
-		return 0, fmt.Errorf("cannot determine USD total: invalid hourly commitment %v", hourly)
+		return 0, fmt.Errorf("refusing real purchase: cannot determine USD total: invalid hourly commitment %v", hourly)
 	}
 	years := termYearsFromRecommendationTerm(rec.Term)
 	if years != 1 && years != 3 {
-		return 0, fmt.Errorf("cannot determine USD total: unsupported savings plan term %q", rec.Term)
+		return 0, fmt.Errorf("refusing real purchase: cannot determine USD total: unsupported savings plan term %q", rec.Term)
 	}
 	return finiteUSD(hourly * savingsPlanHoursPerYear * float64(years))
 }
@@ -51,23 +48,23 @@ func savingsPlanUSD(rec common.Recommendation) (float64, error) {
 // unitOfferingUSD scales the provider's per-reservation total by count.
 func unitOfferingUSD(od *common.OfferingDetails, count int) (float64, error) {
 	if od == nil {
-		return 0, errors.New("cannot determine USD total: provider returned no offering details")
+		return 0, errors.New("refusing real purchase: cannot determine USD total: provider returned no offering details")
 	}
 	if math.IsNaN(od.TotalCost) || math.IsInf(od.TotalCost, 0) || od.TotalCost <= 0 {
-		return 0, fmt.Errorf("cannot determine USD total: provider total cost %v is not a positive price", od.TotalCost)
+		return 0, fmt.Errorf("refusing real purchase: cannot determine USD total: provider total cost %v is not a positive price", od.TotalCost)
 	}
 	if !strings.EqualFold(strings.TrimSpace(od.Currency), "USD") {
-		return 0, fmt.Errorf("cannot determine USD total: offering currency %q is not USD", od.Currency)
+		return 0, fmt.Errorf("refusing real purchase: cannot determine USD total: offering currency %q is not USD", od.Currency)
 	}
 	if count < 1 {
-		return 0, fmt.Errorf("cannot determine USD total: count %d is below 1", count)
+		return 0, fmt.Errorf("refusing real purchase: cannot determine USD total: count %d is below 1", count)
 	}
 	return finiteUSD(od.TotalCost * float64(count))
 }
 
 func finiteUSD(total float64) (float64, error) {
 	if math.IsNaN(total) || math.IsInf(total, 0) {
-		return 0, errors.New("cannot determine USD total: computed total overflows")
+		return 0, errors.New("refusing real purchase: cannot determine USD total: computed total overflows")
 	}
 	return total, nil
 }
@@ -76,14 +73,14 @@ func finiteUSD(total float64) (float64, error) {
 // allowed) and returns the total otherwise.
 func enforceUSDCap(ctx context.Context, client provider.ServiceClient, rec common.Recommendation, limit float64) (float64, error) {
 	if math.IsNaN(limit) || math.IsInf(limit, 0) || limit <= 0 {
-		return 0, fmt.Errorf("invalid %s limit %v: must be a finite number above 0", usdCapEnv, limit)
+		return 0, fmt.Errorf("refusing real purchase: %s limit %v must be a finite number above 0", EnvMaxCommitmentUSD, limit)
 	}
 	total, err := committedUSD(ctx, client, rec)
 	if err != nil {
 		return 0, err
 	}
 	if total > limit {
-		return 0, fmt.Errorf("commitment total %.2f USD exceeds the %s limit of %.2f USD", total, usdCapEnv, limit)
+		return 0, fmt.Errorf("refusing real purchase: commitment total %.2f USD exceeds the operator cap %s=%.2f", total, EnvMaxCommitmentUSD, limit)
 	}
 	return total, nil
 }
