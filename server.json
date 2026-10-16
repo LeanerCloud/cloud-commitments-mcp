@@ -53,6 +53,13 @@
           "format": "string"
         },
         {
+          "name": "CUDLY_MCP_BUDGET_USD",
+          "description": "Positive number (USD). Cumulative budget for the total USD all real purchases commit over their full terms in this server process. Required for any real purchase: unset, empty or invalid refuses it. In memory only: resets on restart, not shared across processes or clients, blind to purchases made elsewhere. A purchase with an unknown outcome counts as spent.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        },
+        {
           "name": "CUDLY_MCP_AUDIT_LOG",
           "description": "Overrides the local JSONL purchase audit path after trimming. When unset, writes to $XDG_STATE_HOME/cudly/mcp-audit.jsonl; if XDG_STATE_HOME is unset, empty, or relative, it is ignored and the fallback is ~/.local/state/cudly/mcp-audit.jsonl. An empty or whitespace-only CUDLY_MCP_AUDIT_LOG value disables auditing.",
           "isRequired": false,

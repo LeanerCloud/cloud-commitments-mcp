@@ -27,6 +27,9 @@ const (
 	// EnvMaxCommitmentUSD caps the total USD one purchase commits over its
 	// full term, priced by the provider just before the purchase.
 	EnvMaxCommitmentUSD = "CUDLY_MCP_MAX_COMMITMENT_USD"
+	// EnvBudgetUSD is the cumulative USD budget across all real purchases of
+	// this process. Unlike the caps above it is NOT per call.
+	EnvBudgetUSD = "CUDLY_MCP_BUDGET_USD"
 )
 
 // capSetting names one cap for error messages: the environment variable and,
@@ -41,12 +44,15 @@ var (
 	capHourly = capSetting{EnvMaxHourlyCommitment, "Maximum hourly commitment (USD/hour)"}
 	capMemory = capSetting{EnvMaxMemoryGB, "Maximum committed memory (GB)"}
 	capUSD    = capSetting{EnvMaxCommitmentUSD, "Maximum commitment per purchase call (USD)"}
+	capBudget = capSetting{EnvBudgetUSD, "Cumulative purchase budget per server process (USD)"}
 )
 
 func readUSDCap() (float64, error) { return capUSD.readFloat() }
 
+func readBudget() (float64, error) { return capBudget.readFloat() }
+
 func (c capSetting) unset() error {
-	return fmt.Errorf("refusing real purchase: spend cap %s is not set; set it (Claude Desktop: %q) to the largest value one purchase call may use",
+	return fmt.Errorf("refusing real purchase: spend cap %s is not set; set it (Claude Desktop: %q) to a positive value",
 		c.env, c.desktop)
 }
 

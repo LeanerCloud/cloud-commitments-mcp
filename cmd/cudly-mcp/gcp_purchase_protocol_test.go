@@ -130,6 +130,7 @@ func TestGCPComputeEngineCUDPurchaseRefusedByUSDCap(t *testing.T) {
 	t.Setenv(tools.EnvMaxHourlyCommitment, "1000")
 	t.Setenv(tools.EnvMaxMemoryGB, "1000")
 	t.Setenv(tools.EnvMaxCommitmentUSD, "1000000000")
+	t.Setenv(tools.EnvBudgetUSD, "1000000000000")
 	service := &fakeComputeEngineCommitmentsService{}
 
 	provider.GetRegistry().Unregister("gcp")
