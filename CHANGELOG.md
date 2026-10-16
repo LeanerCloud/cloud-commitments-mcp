@@ -7,6 +7,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- `CUDLY_MCP_BUDGET_USD`: a cumulative per-process USD purchase budget. It
+  is in memory (resets on restart, not shared, blind to purchases made
+  elsewhere); unknown outcomes count as spent.
 - `cudly_archera_comparison`: a read-only comparison of an Archera commitment
   plan (current offer and alternatives per line item, plus plan-wide
   hypotheticals), with exact decimal money, unknown as null, and both Archera
@@ -56,6 +59,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Breaking
 
+- **`CUDLY_MCP_BUDGET_USD` is now required for every real purchase.**
+  Unset, empty or invalid refuses the purchase before credentials are
+  resolved. The MCPB bundle has a matching setting that must be filled in.
 - **`CUDLY_MCP_MAX_COMMITMENT_USD` is now required for every real purchase.**
   Unset, empty or invalid refuses the purchase before credentials are
   resolved. The MCPB bundle has a matching setting that must be filled in before any real purchase. Executing a

@@ -565,6 +565,12 @@ func logPurchaseOutcome(rec common.Recommendation, token, commitmentID string, s
 		rec.Provider, rec.ResourceType, rec.Count, commitmentID, common.MaskToken(token))
 }
 
+// purchaseLimits are the operator limits read before any credential use.
+type purchaseLimits struct {
+	usd    float64 // per-call USD cap
+	budget float64 // cumulative per-process USD budget
+}
+
 // authorizeRealPurchase runs every gate a real purchase must clear, in the
 // order that touches the least. It is only ever reached with mode ==
 // modeExecute (ExecutePurchase returns the preview before calling it), so a
@@ -576,32 +582,36 @@ func logPurchaseOutcome(rec common.Recommendation, token, commitmentID string, s
 // read. Order matters: both the operator opt-in and the credential-scope
 // check run before ResolveClient, so a refusal never resolves credentials or
 // contacts a provider.
-func authorizeRealPurchase(req PurchaseRequest, rec common.Recommendation) (float64, error) {
+func authorizeRealPurchase(req PurchaseRequest, rec common.Recommendation) (purchaseLimits, error) {
 	// Operator authorization. See EnvEnableRealPurchases for why the
 	// model-supplied confirm flag alone is not enough.
 	if !realPurchasesEnabled() {
-		return 0, fmt.Errorf("real purchases are disabled: set %s=1 to allow the MCP server to execute real purchases",
+		return purchaseLimits{}, fmt.Errorf("real purchases are disabled: set %s=1 to allow the MCP server to execute real purchases",
 			EnvEnableRealPurchases)
 	}
 	// Operator spend ceiling, per call. See enforceSpendCaps.
 	if err := enforceSpendCaps(rec); err != nil {
-		return 0, err
+		return purchaseLimits{}, err
 	}
 	// The USD cap is read here, before any credential or network use; the
 	// total itself needs the provider client, so it is checked in ExecutePurchase.
 	usdLimit, err := readUSDCap()
 	if err != nil {
-		return 0, err
+		return purchaseLimits{}, err
+	}
+	budget, err := readBudget()
+	if err != nil {
+		return purchaseLimits{}, err
 	}
 	// Target account must be determinable. See requireCredentialScope for why
 	// an undeterminable one is a double-purchase hazard, not a cosmetic gap.
 	if err := requireCredentialScope(rec.Provider, req.CredentialScope); err != nil {
-		return 0, err
+		return purchaseLimits{}, err
 	}
 	if req.ResolveClient == nil {
-		return 0, fmt.Errorf("internal error: no ResolveClient configured for real purchase")
+		return purchaseLimits{}, fmt.Errorf("internal error: no ResolveClient configured for real purchase")
 	}
-	return usdLimit, nil
+	return purchaseLimits{usd: usdLimit, budget: budget}, nil
 }
 
 // ExecutePurchase runs the shared dry_run/confirm safety gate, then every
@@ -637,7 +647,7 @@ func ExecutePurchase(ctx context.Context, req PurchaseRequest) (*PurchaseRespons
 	// against the err declared above, while `err =` trips gocritic's
 	// sloppyReassign. A distinct name satisfies both (same reason as
 	// validateSavingsPlanArgs' commitErr in aws_savingsplans.go).
-	usdLimit, authErr := authorizeRealPurchase(req, rec)
+	limits, authErr := authorizeRealPurchase(req, rec)
 	if authErr != nil {
 		return nil, authErr
 	}
@@ -649,9 +659,15 @@ func ExecutePurchase(ctx context.Context, req PurchaseRequest) (*PurchaseRespons
 
 	// Like a ResolveClient failure, a cap refusal happens before any purchase
 	// attempt and writes no audit record.
-	if _, capErr := enforceUSDCap(ctx, client, rec, usdLimit); capErr != nil {
+	usd, capErr := enforceUSDCap(ctx, client, rec, limits.usd)
+	if capErr != nil {
 		return nil, capErr
 	}
+	reservation, budgetErr := processBudget.reserve(usd, limits.budget)
+	if budgetErr != nil {
+		return nil, budgetErr
+	}
+	log.Printf("mcp budget: reserved %.2f of %.2f USD (committed %.2f)", usd, limits.budget, processBudget.committedUSD())
 
 	token := common.DeriveIdempotencyToken(idempotencyKeyFor(req.Region, rec, req.CredentialScope, req.Nonce), 0)
 	opts := common.PurchaseOptions{
@@ -659,9 +675,18 @@ func ExecutePurchase(ctx context.Context, req PurchaseRequest) (*PurchaseRespons
 		IdempotencyToken: token,
 	}
 
+	return purchaseAndSettle(ctx, req, client, opts, reservation)
+}
+
+// purchaseAndSettle makes the purchase call, logs and audits it, and settles
+// the budget reservation. Once PurchaseCommitment has been invoked the
+// reservation stays counted unless purchaseSpent says nothing was bought.
+func purchaseAndSettle(ctx context.Context, req PurchaseRequest, client provider.ServiceClient, opts common.PurchaseOptions, reservation *budgetReservation) (*PurchaseResponse, error) {
+	rec, token := req.Recommendation, opts.IdempotencyToken
 	logPurchaseAttempt(req, rec, token)
 
 	result, err := client.PurchaseCommitment(ctx, rec, opts)
+	reservation.settle(purchaseSpent(result, err))
 	if err != nil {
 		logPurchaseOutcome(rec, token, "", false, err)
 		recordPurchaseAudit(rec, req.CredentialScope, common.PurchaseResult{Error: err}, auditStatusForError(err), false)
