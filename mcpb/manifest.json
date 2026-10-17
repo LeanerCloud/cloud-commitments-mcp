@@ -101,7 +101,7 @@
     "max_commitment_usd": {
       "type": "number",
       "title": "Maximum commitment per purchase call (USD)",
-      "description": "Per-call ceiling on the total USD one purchase commits over its full term, priced by the provider just before buying. Required before any real purchase: leave it empty and purchases are refused. USD only; purchases that cannot be priced (including real GCP CUD purchases for now) are refused. Applies per call, not cumulatively.",
+      "description": "Per-call ceiling on the total USD one purchase commits over its full term, priced by the provider just before buying. Required before any real purchase: leave it empty and purchases are refused. USD only; purchases that cannot be priced are refused. Applies per call, not cumulatively.",
       "min": 1,
       "required": false
     },

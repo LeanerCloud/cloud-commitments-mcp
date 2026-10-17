@@ -21,6 +21,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
   real purchase commits over its full term, priced from the provider's own
   offering lookup (Savings Plans: hourly commitment x 8760 x years). USD only;
   unpriceable purchases are refused.
+- Real GCP CUD purchases are priced again: the `cloud-commitments-go` pins are
+  bumped to 309cb5c, which prices CUDs per vCPU and GiB from the Cloud Billing
+  catalog. The total is the whole-term list price and is not multiplied by
+  `vcpu_count`. A real GCP purchase needs the Cloud Billing API enabled in the
+  project and re-lists the full Compute catalog (about 33k SKUs) on each call.
 
 ### Security
 
@@ -38,6 +43,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- The pin bump to 309cb5c (range 9dae64b..309cb5c) also changes search
+  results: EC2 RI recommendations are priced as Convertible, MemoryDB is
+  included, the AWS Savings Plan recurring monthly cost is net of the upfront
+  payment, and Azure Savings Plan recommendations are returned. No purchase
+  path changes beyond GCP pricing, and audit lines are unchanged.
 - Bumped the `cloud-commitments-go` pins to main (9dae64b). `ARCHERA_API_KEY`
   must now be printable ASCII (0x21-0x7E): the client rejects any other byte
   and its error never echoes the key. Library decode errors now show only
@@ -67,9 +77,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
   resolved. The MCPB bundle has a matching setting that must be filled in before any real purchase. Executing a
   purchase now also needs credentials and network access for the provider's
   offering lookup.
-- **Real GCP CUD purchases are refused** until the `cloud-commitments-go` pin
-  includes the CUD pricing fix (go#321), because their USD total cannot be
-  determined yet. Previews are unaffected.
 
 - **Real purchases now require operator spend caps.** With
   `CUDLY_MCP_ENABLE_REAL_PURCHASES=1`, every real purchase is refused unless
