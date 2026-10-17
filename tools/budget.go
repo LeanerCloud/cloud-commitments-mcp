@@ -58,8 +58,11 @@ func (l *budgetLedger) committedUSD() float64 {
 // an adopted existing commitment is released; every error and any other
 // result may have spent money, so it stays counted.
 func purchaseSpent(result common.PurchaseResult, err error) bool {
+	if err != nil {
+		return true
+	}
 	if result.ExistingCommitment {
 		return false
 	}
-	return err != nil || result.Success || result.Error != nil
+	return result.Success || result.Error != nil
 }

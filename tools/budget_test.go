@@ -114,6 +114,20 @@ func TestBudgetExistingCommitmentReleases(t *testing.T) {
 	require.NoError(t, runWithNonce(fake, "a"))
 }
 
+// TestBudgetExistingCommitmentWithErrorKeepsCounted pins the ordering inside
+// purchaseSpent: an error outranks the adopted-commitment result field, so a
+// provider that reports ExistingCommitment AND fails still keeps its
+// reservation counted. No provider is known to return that combination, but
+// the error case is the one that may have spent money.
+func TestBudgetExistingCommitmentWithErrorKeepsCounted(t *testing.T) {
+	resetBudget(t, "100")
+	fake := pricedFake(60, common.PurchaseResult{ExistingCommitment: true}, assert.AnError)
+	require.Error(t, runWithNonce(fake, "a"))
+	assert.InDelta(t, 60, processBudget.committedUSD(), 1e-9)
+	require.ErrorContains(t, runWithNonce(fake, "b"), EnvBudgetUSD)
+	assert.Equal(t, 1, fake.purchaseCalls)
+}
+
 func TestBudgetUnsetRefusesBeforeResolve(t *testing.T) {
 	resetBudget(t, "")
 	fake := &fakeServiceClient{}
