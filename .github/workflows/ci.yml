@@ -56,9 +56,23 @@ jobs:
         run: |
           set -euo pipefail
           export GOLANGCI_LINT_CACHE="$HOME/.cache/golangci-lint"
+          # config verify fetches its JSON schema over the network, so retry transient failures.
+          verify_config() {
+            local attempt
+            for attempt in 1 2 3; do
+              if golangci-lint config verify; then
+                return 0
+              fi
+              echo "golangci-lint config verify failed (attempt $attempt of 3)" >&2
+              if [ "$attempt" -lt 3 ]; then
+                sleep $((attempt * 10))
+              fi
+            done
+            return 1
+          }
           for mod in .; do
             echo "==> golangci-lint in $mod"
-            (cd "$mod" && golangci-lint config verify && golangci-lint run --timeout=10m)
+            (cd "$mod" && verify_config && golangci-lint run --timeout=10m)
           done
 
       - name: Run go vet
