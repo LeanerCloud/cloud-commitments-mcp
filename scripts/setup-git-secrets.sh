@@ -95,7 +95,9 @@ echo "Adding custom secret patterns..."
 
 # AWS patterns
 git secrets --add 'AKIA[0-9A-Z]{16}'                                    # AWS Access Key ID
-git secrets --add '[^A-Za-z0-9/+=]{40}[^A-Za-z0-9/+=]'                 # AWS Secret Access Key
+# macOS git grep has no \s, so the two --register-aws patterns that use it miss spaced assignments
+git secrets --add '("|'\'')?(AWS|aws|Aws)?_?(SECRET|secret|Secret)?_?(ACCESS|access|Access)?_?(KEY|key|Key)("|'\'')?[[:space:]]*(:|=>|=)[[:space:]]*("|'\'')?[A-Za-z0-9/\+=]{40}("|'\'')?'
+git secrets --add '("|'\'')?(AWS|aws|Aws)?_?(ACCOUNT|account|Account)_?(ID|id|Id)?("|'\'')?[[:space:]]*(:|=>|=)[[:space:]]*("|'\'')?[0-9]{4}\-?[0-9]{4}\-?[0-9]{4}("|'\'')?'
 git secrets --add 'aws(.{0,20})?['\''"][0-9a-zA-Z/+]{40}['\''"]'       # AWS Credentials
 
 # GCP patterns
@@ -111,9 +113,8 @@ git secrets --add 'secret[_-]?key[[:space:]]*[=:][[:space:]]*['\''"][^'\''"]{8,}
 git secrets --add 'BEGIN[[:space:]]((RSA|DSA|EC|OPENSSH|ENCRYPTED)[[:space:]])?PRIVATE[[:space:]]KEY-----'  # PEM private keys
 
 # Database connection strings
-git secrets --add 'postgres://[^:]+:[^@]+@'                           # PostgreSQL
-git secrets --add 'mysql://[^:]+:[^@]+@'                              # MySQL
-git secrets --add 'mongodb(\+srv)?://[^:]+:[^@]+@'                    # MongoDB
+# The match must end on a host character: git-secrets scans with -w, which drops a match followed by a word character
+git secrets --add '(postgres(ql)?|mysql|mongodb(\+srv)?)://[^:/@[:space:]]+:[^@/[:space:]$<{][^@/[:space:]]*@[^[:space:]'\''"/?#]+'  # Database DSN with an inline password
 
 # Allowed patterns live in .gitallowed (versioned, applied by every scan, including CI).
 # They are matched against the whole "path:line:content" scanner output line, so an entry

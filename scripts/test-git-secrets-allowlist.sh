@@ -120,7 +120,7 @@ run_case "untruncated PKCS8 body" 1 e.json \
 run_case "corrected GCP API key range" 1 f.txt \
     "$AIZA"
 run_case "password with real spaces around the separator" 1 n.txt \
-    'password = "hunter2hunter2"'
+    'pass''word = "hunter2hunter2"'
 run_case "secret before an otherwise-allowed truncated PEM, same line" 1 l.go \
     'k := "'"$KEY"'"; PrivateKey: "'"$PEM"'\n...",'
 run_case "secret after an otherwise-allowed truncated PEM, same line" 1 m.go \
@@ -138,6 +138,43 @@ run_case "GCP key beside a placeholder UUID" 1 q.txt \
 # clean cases below are not passing because the detector is dead.
 run_case "account ID assignment is still detected" 1 r.txt \
     'account''_id="123456789013"'
+
+# DSN detectors (#58): git-secrets scans with -w, so a pattern ending in the
+# credential separator never matched; each of these must be caught.
+DSN_TAIL="://app:S3cretPw@db.example.com/app"
+run_case "postgres DSN with a password" 1 v1.txt \
+    'dsn: postgre''s'"$DSN_TAIL"
+run_case "postgresql DSN with a password" 1 v2.txt \
+    'dsn: postgre''sql'"$DSN_TAIL"
+run_case "mysql DSN with a password" 1 v3.txt \
+    'dsn: mysq''l'"$DSN_TAIL"
+run_case "mongodb DSN with a password" 1 v4.txt \
+    'dsn: mongo''db'"$DSN_TAIL"
+run_case "mongodb+srv DSN with a password" 1 v5.txt \
+    'dsn: mongo''db+srv'"$DSN_TAIL"
+run_case "DSN with a percent-encoded password" 1 v6.txt \
+    'dsn: postgre''s://app:p%40ss%3Aw0rd@db.example.com/app'
+run_case "DSN with an IPv6 host" 1 v7.txt \
+    'dsn: postgre''s://app:S3cretPw@[::1]:5432/app'
+run_case "quoted DSN" 1 v8.txt \
+    'url = "postgre''s'"$DSN_TAIL"'"'
+# The POSIX-class twins: git grep on macOS has no \s (#58).
+run_case "spaced account ID assignment" 1 w1.txt \
+    'account''_id = "123456789013"'
+run_case "camelCase account ID with a space" 1 w2.txt \
+    'account''Id: "123456789013"'
+run_case "spaced AWS secret access key assignment" 1 w3.txt \
+    'aws_secret_access''_key = '"$(head -c 40 /dev/zero | tr '\0' a)"
+
+# DSN lookalikes that must stay clean.
+run_case "DSN with a shell-variable password" 0 x1.txt \
+    'dsn: postgre''s://app:${DB_PASS}@db.example.com/app'
+run_case "DSN with a placeholder password" 0 x2.txt \
+    'dsn: postgre''s://app:<password>@db.example.com/app'
+run_case "DSN without a password" 0 x3.txt \
+    'dsn: postgre''s://app@db.example.com/app'
+run_case "http URL with userinfo is not a database DSN" 0 x4.txt \
+    'see https://user:pw@example.com/'
 
 # Negative controls for the setup-script allowlist entries below, each
 # closing one instance of the same class of hole (#1972 reintroduced at
@@ -163,7 +200,7 @@ cp "$REPO_ROOT/scripts/setup-git-secrets.sh" scripts/setup-git-secrets.sh
 # narrower version of the same hole the entry above closes.
 run_case "secret appended to a self-matching line itself stays caught" 1 \
     scripts/setup-git-secrets.sh \
-    "$(sed "s/# PostgreSQL\$/# PostgreSQL ${KEY}/" "$REPO_ROOT/scripts/setup-git-secrets.sh")"
+    "$(sed "s/# Azure Connection String\$/# Azure Connection String ${KEY}/" "$REPO_ROOT/scripts/setup-git-secrets.sh")"
 cp "$REPO_ROOT/scripts/setup-git-secrets.sh" scripts/setup-git-secrets.sh
 
 # Must scan clean (exit 0): what the tree contains, and what the allowlist

@@ -15,16 +15,15 @@
 # rotate it and treat the leak seriously instead of silencing the scanner.
 
 # scripts/setup-git-secrets.sh registers its detectors as literal regex text
-# and three of them (Azure connection string, PostgreSQL and MySQL DSN
-# detectors, verified empirically -- MongoDB's does not) match their own
+# and one of them (the Azure connection string detector) matches its own
 # registration line. Each entry below is anchored on the path, the line
 # number, AND the entire line as it appears in that file (including the
 # trailing comment), with a trailing $ -- not just the "git secrets --add
 # '" command prefix, and not just the added pattern with the anchor left
 # open at the end. A prefix-only anchor whitelists a secret appended to
 # ANY registration line in this file; an anchor missing the trailing $
-# whitelists a secret appended to the END of one of these three specific
-# lines. Both are the #1972 hole reintroduced at a smaller scale, and both
+# whitelists a secret appended to the END of this specific
+# line. Both are the #1972 hole reintroduced at a smaller scale, and both
 # were caught only by a fixture exercising exactly that mutation -- add
 # one for any future entry in this block that isn't already covered.
 #
@@ -38,8 +37,6 @@
 # self-scan case below fails -- and note this comment must not spell any
 # of those spans out literally either, for the same reason).
 ^scripts/setup-git-secrets\.sh:[0-9]+:git secrets --add 'DefaultEndpointsProtoco[l]=https'                      # Azure Connection String$
-^scripts/setup-git-secrets\.sh:[0-9]+:git secrets --add 'postgre[s]://\[\^:\]\+:\[\^@\]\+@'                           # PostgreSQL$
-^scripts/setup-git-secrets\.sh:[0-9]+:git secrets --add 'mysq[l]://\[\^:\]\+:\[\^@\]\+@'                              # MySQL$
 
 # Truncated PEM placeholder used by scripts/test-git-secrets-allowlist.sh
 # (and by any fixture in this repo needing a non-secret PEM-shaped string):

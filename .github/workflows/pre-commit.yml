@@ -99,11 +99,11 @@ jobs:
         # mutable in principle, so also assert HEAD resolves to the exact
         # commit verified at the time this was written (`git ls-remote
         # --tags` against the upstream repo) before trusting it enough to
-        # `sudo make install`. After install we register the AWS pattern
-        # set and ASSERT at least one pattern was registered — without the
-        # assert, a registration failure produces a patternless scanner
-        # that exits 0 unconditionally, leaving the gate silently
-        # downgraded.
+        # `sudo make install`. After install we run the setup script, which
+        # registers the full pattern set and scans the tree, and ASSERT at
+        # least one pattern was registered; without the assert, a
+        # registration failure produces a patternless scanner that exits 0
+        # unconditionally, leaving the gate silently downgraded.
         env:
           GIT_SECRETS_SHA: ad82d68ee924906a0401dfd48de5057731a9bc84
         run: |
@@ -115,8 +115,8 @@ jobs:
             exit 1
           fi
           sudo make -C /tmp/git-secrets install
-          git secrets --register-aws --global
-          git secrets --list --global | grep -q '.' || {
+          bash scripts/setup-git-secrets.sh
+          git secrets --list | grep -q '.' || {
             echo "git-secrets registration produced no patterns — gate would be silently disabled"
             exit 1
           }
