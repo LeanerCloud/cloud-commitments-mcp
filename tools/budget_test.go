@@ -2,6 +2,8 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
+	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -126,6 +128,112 @@ func TestBudgetExistingCommitmentWithErrorKeepsCounted(t *testing.T) {
 	assert.InDelta(t, 60, processBudget.committedUSD(), 1e-9)
 	require.ErrorContains(t, runWithNonce(fake, "b"), EnvBudgetUSD)
 	assert.Equal(t, 1, fake.purchaseCalls)
+}
+
+// reservedUSD reads the in-flight reservation total, so a test can prove a
+// settle released it rather than leaving it held.
+func reservedUSD() float64 {
+	processBudget.mu.Lock()
+	defer processBudget.mu.Unlock()
+	return processBudget.reserved
+}
+
+// panickingClient panics from PurchaseCommitment, standing in for an SDK bug
+// or a nil dereference inside a provider client. The panic value is a string
+// so a test can also prove it never reaches the caller.
+type panickingClient struct{ *fakeServiceClient }
+
+func (c panickingClient) PurchaseCommitment(context.Context, common.Recommendation, common.PurchaseOptions) (common.PurchaseResult, error) {
+	panic("provider sdk exploded")
+}
+
+// cancellingClient cancels the request context from inside
+// PurchaseCommitment and returns its error, standing in for a provider call
+// that observes a cancellation after the reservation was taken.
+type cancellingClient struct {
+	*fakeServiceClient
+	cancel context.CancelFunc
+}
+
+func (c cancellingClient) PurchaseCommitment(ctx context.Context, _ common.Recommendation, _ common.PurchaseOptions) (common.PurchaseResult, error) {
+	c.cancel()
+	return common.PurchaseResult{}, ctx.Err()
+}
+
+// TestBudgetPanicInPurchaseKeepsCountedAndServerAlive pins that a panic
+// inside the provider call is recovered at the call site: the process
+// survives, the reservation settles as spent (the money may already have left
+// the account), a second purchase is refused, and the audit trail records the
+// unknown outcome. The panic value itself must not reach the caller, since it
+// can carry SDK internals.
+func TestBudgetPanicInPurchaseKeepsCountedAndServerAlive(t *testing.T) {
+	resetBudget(t, "100")
+	path := filepath.Join(t.TempDir(), "audit.jsonl")
+	t.Setenv(EnvAuditLog, path)
+	client := panickingClient{&fakeServiceClient{offering: &common.OfferingDetails{TotalCost: 60, Currency: "USD"}}}
+
+	err := runWithNonce(client, "a")
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "outcome unknown")
+	assert.NotContains(t, err.Error(), "provider sdk exploded")
+	assert.InDelta(t, 60, processBudget.committedUSD(), 1e-9)
+	assert.Zero(t, reservedUSD())
+	require.ErrorContains(t, runWithNonce(client, "b"), EnvBudgetUSD)
+
+	lines := readAuditLines(t, path)
+	require.Len(t, lines, 1)
+	var rec struct {
+		Status string `json:"status"`
+	}
+	require.NoError(t, json.Unmarshal([]byte(lines[0]), &rec))
+	assert.Equal(t, auditStatusUnknown, rec.Status)
+}
+
+// TestBudgetCancelledContextBeforePurchaseCountsNothing pins error
+// propagation and accounting when the call never reaches the provider: the
+// already-cancelled context plus an unpriceable offering means nothing was
+// reserved, so nothing is counted. The fake ignores the context entirely, so
+// this does NOT show that a provider honours cancellation; only the
+// unpriceable-offering error stops this call.
+func TestBudgetCancelledContextBeforePurchaseCountsNothing(t *testing.T) {
+	resetBudget(t, "100")
+	fake := &fakeServiceClient{
+		offeringErr:    context.Canceled,
+		purchaseResult: common.PurchaseResult{Success: true, CommitmentID: "id"},
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	rec := testRecommendation()
+	rec.Count = 1
+	_, err := ExecutePurchase(ctx, PurchaseRequest{
+		Region: rec.Region, Recommendation: rec, Confirm: true, CredentialScope: "scope",
+		ResolveClient: func(context.Context) (provider.ServiceClient, error) { return fake, nil },
+	})
+	require.Error(t, err)
+	assert.Zero(t, processBudget.committedUSD())
+	assert.Zero(t, reservedUSD())
+	assert.Zero(t, fake.purchaseCalls)
+}
+
+// TestBudgetCancellationDuringPurchaseKeepsCounted pins that a cancellation
+// observed after the reservation was taken still counts as spent: the call
+// reached the provider and its outcome is unknown from here.
+func TestBudgetCancellationDuringPurchaseKeepsCounted(t *testing.T) {
+	resetBudget(t, "100")
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	client := cancellingClient{&fakeServiceClient{offering: &common.OfferingDetails{TotalCost: 60, Currency: "USD"}}, cancel}
+
+	rec := testRecommendation()
+	rec.Count = 1
+	_, err := ExecutePurchase(ctx, PurchaseRequest{
+		Region: rec.Region, Recommendation: rec, Confirm: true, CredentialScope: "scope",
+		ResolveClient: func(context.Context) (provider.ServiceClient, error) { return client, nil },
+	})
+	require.ErrorIs(t, err, context.Canceled)
+	assert.InDelta(t, 60, processBudget.committedUSD(), 1e-9)
+	assert.Zero(t, reservedUSD())
 }
 
 func TestBudgetUnsetRefusesBeforeResolve(t *testing.T) {

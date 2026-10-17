@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -678,14 +679,34 @@ func ExecutePurchase(ctx context.Context, req PurchaseRequest) (*PurchaseRespons
 	return purchaseAndSettle(ctx, req, client, opts, reservation)
 }
 
+// callPurchase isolates the provider call so a panic inside it cannot kill
+// the stdio server process. An unrecovered panic would take the process down
+// with the in-memory budget that remembers money already spent, so a panic is
+// reported as an unknown outcome and settled as spent. The panic value is
+// logged but never returned: it can carry SDK internals.
+func callPurchase(ctx context.Context, client provider.ServiceClient, rec common.Recommendation, opts common.PurchaseOptions) (result common.PurchaseResult, err error) {
+	defer func() {
+		v := recover()
+		if v == nil {
+			return
+		}
+		log.Printf("mcp purchase PANIC in PurchaseCommitment (%T): %v\n%s", v, v, debug.Stack())
+		result = common.PurchaseResult{}
+		err = fmt.Errorf("provider panicked in PurchaseCommitment (%T), outcome unknown, counted as spent: %w", v, common.ErrOutcomeUnknown)
+	}()
+	return client.PurchaseCommitment(ctx, rec, opts)
+}
+
 // purchaseAndSettle makes the purchase call, logs and audits it, and settles
 // the budget reservation. Once PurchaseCommitment has been invoked the
 // reservation stays counted unless purchaseSpent says nothing was bought.
+// The call goes through callPurchase, so a provider panic reaches this
+// function as an error and follows the same fail-closed path.
 func purchaseAndSettle(ctx context.Context, req PurchaseRequest, client provider.ServiceClient, opts common.PurchaseOptions, reservation *budgetReservation) (*PurchaseResponse, error) {
 	rec, token := req.Recommendation, opts.IdempotencyToken
 	logPurchaseAttempt(req, rec, token)
 
-	result, err := client.PurchaseCommitment(ctx, rec, opts)
+	result, err := callPurchase(ctx, client, rec, opts)
 	reservation.settle(purchaseSpent(result, err))
 	if err != nil {
 		logPurchaseOutcome(rec, token, "", false, err)
