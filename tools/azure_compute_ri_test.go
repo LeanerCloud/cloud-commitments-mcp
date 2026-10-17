@@ -146,7 +146,7 @@ func TestAzureComputeRecommendationFromArgsAcceptsNoUpfront(t *testing.T) {
 
 // TestAzureComputeRecommendationFromArgsDefaultsToNoUpfront proves omitting
 // payment_option defaults to no-upfront (matching the CLI's --payment
-// default, cmd/main.go), not to Azure's raw API default (all-upfront) and
+// default in the cloud-commitments-cli repo), not to Azure's raw API default (all-upfront) and
 // not to an error.
 func TestAzureComputeRecommendationFromArgsDefaultsToNoUpfront(t *testing.T) {
 	t.Parallel()

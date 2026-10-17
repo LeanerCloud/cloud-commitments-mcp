@@ -1,5 +1,5 @@
 // Package tools implements the individual MCP tool handlers exposed by the
-// CUDly MCP server (mcp/server.go), plus the shared validation and purchase
+// CUDly MCP server (server.go), plus the shared validation and purchase
 // harness they all build on.
 package tools
 
@@ -82,8 +82,7 @@ func (t TermYears) RecommendationTerm() string {
 	return fmt.Sprintf("%dyr", int(t))
 }
 
-// SPType is the AWS Savings Plans product family (--include-sp-types in the
-// CLI, cmd/main.go:112).
+// SPType is the AWS Savings Plans product family.
 type SPType string
 
 const (

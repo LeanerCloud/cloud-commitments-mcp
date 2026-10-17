@@ -47,7 +47,7 @@ type listCommitmentActionsTool struct {
 }
 
 // NewListCommitmentActions builds the cudly_list_commitment_actions tool
-// from descriptors -- the same slice of Descriptor values mcp/server.go
+// from descriptors -- the same slice of Descriptor values server.go
 // collects from every other tool's Descriptor() method, so this catalog is
 // generated from the live registry rather than hand-duplicated in code or
 // docs.
@@ -56,7 +56,7 @@ func NewListCommitmentActions(descriptors []Descriptor) Registration {
 }
 
 // ListCommitmentActionsDescriptor returns the static Descriptor for
-// cudly_list_commitment_actions itself. It is exported so mcp/server.go can
+// cudly_list_commitment_actions itself. It is exported so server.go can
 // include this tool in its own catalog: the descriptors slice passed to
 // NewListCommitmentActions must be assembled (and thus known) before the
 // tool exists, so its own entry can't come from calling Descriptor() on an

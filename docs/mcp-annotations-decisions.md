@@ -3,9 +3,8 @@
 This repo has no existing ADR/`docs/decisions/` convention (checked at
 implementation time: no `docs/adr/` or `docs/decisions/` directory), so
 this rationale lives here instead of in a numbered ADR.
-Context: `docs/plans/mcp/05-store.md` Phase A and `docs/plans/mcp/00-scope.md`
-§6 (not checked into this repo -- local planning notes for the MCP
-store-readiness workstream).
+Context: the MCP store-readiness workstream (planning notes are not
+checked into this repo).
 
 ## Why annotations at all
 
@@ -26,7 +25,7 @@ specifically:
 `ReadOnlyHint bool` and `IdempotentHint bool` have no such trap (their zero
 value, `false`, is already the conservative reading), but every Descriptor
 still sets them explicitly via `readOnlyAnnotations`/`purchaseAnnotations`
-(`mcp/tools/registry.go`) so the intent is legible at every call site rather
+(`tools/registry.go`) so the intent is legible at every call site rather
 than resting on an implicit zero value.
 
 ## D1 -- destructiveHint=true on every purchase tool
@@ -51,7 +50,7 @@ therefore set `DestructiveHint: boolPtr(true)`.
 ## A5 -- idempotentHint=false on every purchase tool, always
 
 Every purchase tool's `IdempotentHint` is `false`, unconditionally, even
-though `ExecutePurchase` (`mcp/tools/purchase.go`) already derives an
+though `ExecutePurchase` (`tools/purchase.go`) already derives an
 idempotency key from the request and refuses/dedupes a byte-identical retry.
 
 Rejected alternative: `IdempotentHint=true`, on the theory that the
@@ -77,7 +76,7 @@ Rejected because:
 
 ## Per-tool annotation table
 
-Built from `mcp/tools/registry.go`'s `readOnlyAnnotations`/
+Built from `tools/registry.go`'s `readOnlyAnnotations`/
 `purchaseAnnotations` helpers and each tool's `Descriptor()`. Every tool sets
 `ReadOnlyHint`, `DestructiveHint`, `IdempotentHint`, and `OpenWorldHint`
 explicitly; none rely on the SDK's nil-defaults-to-true behavior.

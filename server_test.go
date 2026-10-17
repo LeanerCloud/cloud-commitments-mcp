@@ -136,7 +136,7 @@ func TestRegistryNonEmpty(t *testing.T) {
 // without any AWS credentials configured in this test environment --
 // confirming dry_run=true never reaches the real purchase path even through
 // the full protocol stack, not just the Go-level unit tests in
-// mcp/tools/aws_ec2_ri_test.go.
+// tools/aws_ec2_ri_test.go.
 func TestEndToEndSearchThenDryRunPurchase(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
@@ -252,7 +252,7 @@ func TestRealPurchaseToolsDocumentMoneyImpactAndDryRun(t *testing.T) {
 // TestAzureComputeRIPurchaseSchemaExcludesPartialUpfront proves the
 // cudly_azure_compute_ri_purchase tool's advertised payment_option enum
 // never offers partial-upfront: Azure has no partial-upfront billing plan
-// (mcp/tools/azure_compute_ri.go rejects it at runtime as defense in depth),
+// (tools/azure_compute_ri.go rejects it at runtime as defense in depth),
 // so the schema itself must not invite a caller to pick a value the tool
 // can only ever refuse. Drives the real MCP protocol (ListTools), not a
 // bare Go function call, so it catches a regression in what a real client

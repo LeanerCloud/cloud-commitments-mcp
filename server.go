@@ -1,5 +1,5 @@
 // Package mcp wires the CUDly MCP server: it registers every tool from
-// mcp/tools onto a github.com/modelcontextprotocol/go-sdk/mcp.Server and
+// tools/ onto a github.com/modelcontextprotocol/go-sdk/mcp.Server and
 // builds the cudly_list_commitment_actions catalog from those same tools'
 // descriptors, so the live tool set and the discoverability catalog can
 // never drift apart.

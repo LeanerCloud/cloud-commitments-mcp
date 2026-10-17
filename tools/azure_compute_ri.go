@@ -173,7 +173,7 @@ func azureComputeRecommendationFromArgs(args azureComputeRIPurchaseArgs) (rec co
 	}
 
 	// payment_option defaults to no-upfront (matching the CLI's --payment
-	// default, cmd/main.go) when the caller omits it -- an omitted string
+	// default in the cloud-commitments-cli repo) when the caller omits it -- an omitted string
 	// field arrives as "" and is never confused with an explicit,
 	// unrecognized value (feedback_no_silent_fallbacks: the default is
 	// applied here, explicitly, not fabricated deeper in the stack).

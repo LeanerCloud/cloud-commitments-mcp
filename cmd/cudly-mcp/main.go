@@ -1,10 +1,8 @@
 // Command cudly-mcp runs the CUDly MCP server on stdio, exposing CUDly's
 // RI/SP/CUD search and purchase tools to any MCP client (e.g. Claude Code
-// via ~/.claude/mcp.json). See mcp/README.md for setup and usage.
+// via ~/.claude/mcp.json). See README.md for setup and usage.
 //
-// This binary is intentionally separate from the ri-helper CLI (cmd/main.go):
-// it is a local/desktop MCP server, never a Lambda handler, and is kept out
-// of iac/ and terraform/ (see mcp/README.md "Deployment model").
+// This binary is a local/desktop MCP server, never a Lambda handler.
 package main
 
 import (

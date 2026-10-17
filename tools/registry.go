@@ -3,7 +3,7 @@ package tools
 import "github.com/modelcontextprotocol/go-sdk/mcp"
 
 // Descriptor is the source-of-truth metadata for one MCP tool. Every tool
-// file builds one and both mcp/server.go (to know what to register) and
+// file builds one and both server.go (to know what to register) and
 // cudly_list_commitment_actions (to know what to advertise) read it, so the
 // live tool set and the discoverability catalog can never drift apart --
 // there is exactly one place each tool's name/description/example prompts
@@ -85,10 +85,9 @@ func readOnlyAnnotations(title string, openWorld bool) *mcp.ToolAnnotations {
 // "purchasing is additive, not destructive" reading was considered and
 // rejected), OpenWorldHint true (every purchase reaches a live cloud
 // provider API), and IdempotentHint FALSE on every purchase tool, always
-// (A5, 00-scope.md §6 decision register) -- even though ExecutePurchase
-// derives an idempotency key from the request and dedupes an identical
-// retry (mcp/tools/purchase.go), the hint can't express that conditional
-// safety: idempotency_nonce is caller-supplied, so one optional string
+// -- even though ExecutePurchase derives an idempotency key from the request
+// and dedupes an identical retry (tools/purchase.go), the hint can't express
+// that conditional safety: idempotency_nonce is caller-supplied, so one optional string
 // turns an otherwise-identical "safe retry" into a second real purchase,
 // and provider-side dedupe (AWS ClientToken, Azure/GCP equivalents) is
 // time- and scope-bounded, not permanent. The failure asymmetry only points

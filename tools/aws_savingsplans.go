@@ -189,7 +189,7 @@ func savingsPlanRecommendationFromArgs(args savingsPlansPurchaseArgs) (rec commo
 	// Account-level plan types (Compute/SageMaker/Database) ignore region
 	// entirely, so pin the canonical one rather than honoring whatever the
 	// caller passed. region flows into rec.Region and from there into
-	// idempotencyKeyFor (mcp/tools/purchase.go), so letting an IGNORED input
+	// idempotencyKeyFor (tools/purchase.go), so letting an IGNORED input
 	// through would fork purchase identity: buying a $10/hr Compute SP once
 	// without region and then re-issuing the identical call with
 	// region="eu-west-1" (a self-correction, or a retry that fills the field

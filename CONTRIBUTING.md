@@ -12,7 +12,7 @@ By participating in this project, you agree to maintain a respectful and inclusi
 
 1. **Search existing issues** - Check if the bug has already been reported
 2. **Create a detailed report** including:
-   - CUDly version (`./cudly --version`)
+   - CUDly MCP server version (`bin/cudly-mcp` has no version flag: give the release tag, or `git rev-parse --short HEAD` for a source build)
    - Go version (`go version`)
    - Operating system and architecture
    - Cloud provider and service affected
