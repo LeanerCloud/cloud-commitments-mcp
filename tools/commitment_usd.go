@@ -17,8 +17,16 @@ func committedUSD(ctx context.Context, client provider.ServiceClient, rec common
 	switch {
 	case rec.CommitmentType == common.CommitmentSavingsPlan:
 		return savingsPlanUSD(rec)
+	case rec.Provider == common.ProviderGCP && rec.CommitmentType == common.CommitmentCUD:
+		// Count is the vCPU quantity and the library already multiplies it into
+		// TotalCost (computeengine client.go getComputePricing), so no count factor.
+		od, err := client.GetOfferingDetails(ctx, rec)
+		if err != nil {
+			return 0, fmt.Errorf("refusing real purchase: cannot determine USD total: %w", err)
+		}
+		return offeringTotalUSD(od)
 	case rec.Provider == common.ProviderGCP || rec.CommitmentType == common.CommitmentCUD:
-		return 0, errors.New("refusing real purchase: USD totals for GCP committed-use discounts are unavailable at the pinned cloud-commitments-go (go#321), so real GCP CUD purchases are refused")
+		return 0, errors.New("refusing real purchase: cannot determine USD total: GCP recommendations must be CUDs and CUDs must be GCP")
 	}
 	od, err := client.GetOfferingDetails(ctx, rec)
 	if err != nil {
@@ -45,8 +53,8 @@ func savingsPlanUSD(rec common.Recommendation) (float64, error) {
 	return finiteUSD(hourly * savingsPlanHoursPerYear * float64(years))
 }
 
-// unitOfferingUSD scales the provider's per-reservation total by count.
-func unitOfferingUSD(od *common.OfferingDetails, count int) (float64, error) {
+// offeringTotalUSD validates the provider's whole-commitment total as USD.
+func offeringTotalUSD(od *common.OfferingDetails) (float64, error) {
 	if od == nil {
 		return 0, errors.New("refusing real purchase: cannot determine USD total: provider returned no offering details")
 	}
@@ -56,10 +64,19 @@ func unitOfferingUSD(od *common.OfferingDetails, count int) (float64, error) {
 	if !strings.EqualFold(strings.TrimSpace(od.Currency), "USD") {
 		return 0, fmt.Errorf("refusing real purchase: cannot determine USD total: offering currency %q is not USD", od.Currency)
 	}
+	return od.TotalCost, nil
+}
+
+// unitOfferingUSD scales the provider's per-reservation total by count.
+func unitOfferingUSD(od *common.OfferingDetails, count int) (float64, error) {
+	unit, err := offeringTotalUSD(od)
+	if err != nil {
+		return 0, err
+	}
 	if count < 1 {
 		return 0, fmt.Errorf("refusing real purchase: cannot determine USD total: count %d is below 1", count)
 	}
-	return finiteUSD(od.TotalCost * float64(count))
+	return finiteUSD(unit * float64(count))
 }
 
 func finiteUSD(total float64) (float64, error) {

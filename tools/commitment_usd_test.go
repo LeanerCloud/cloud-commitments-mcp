@@ -71,8 +71,36 @@ func TestCommittedUSDPerProvider(t *testing.T) {
 	}
 }
 
+// GCP's Count is the vCPU quantity and the library already multiplies it into
+// TotalCost, so the figure is used as the whole commitment.
+func TestCommittedUSDGCPCUDIsWholeCommitment(t *testing.T) {
+	realTotal := (4*0.019915 + 16*0.002669) * 8760
+	for _, tc := range []struct {
+		name  string
+		total float64
+		count int
+	}{
+		{"count 4", 1000, 4},
+		{"count 96", 1000, 96},
+		{"library figures", realTotal, 4},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			c := &offeringClient{od: usdOffering(tc.total)}
+			rec := common.Recommendation{
+				Provider: common.ProviderGCP, Service: common.ServiceCompute,
+				CommitmentType: common.CommitmentCUD, Term: "3yr", Count: tc.count,
+			}
+			got, err := committedUSD(context.Background(), c, rec)
+			require.NoError(t, err)
+			assert.InDelta(t, tc.total, got, 1e-9)
+			assert.Equal(t, 1, c.calls)
+		})
+	}
+}
+
 func TestCommittedUSDFailsClosed(t *testing.T) {
 	aws := common.Recommendation{Provider: common.ProviderAWS, Service: common.ServiceEC2, Count: 2}
+	gcpCUD := common.Recommendation{Provider: common.ProviderGCP, Service: common.ServiceCompute, CommitmentType: common.CommitmentCUD, Count: 4}
 	withCount := func(n int) common.Recommendation { r := aws; r.Count = n; return r }
 	tests := []struct {
 		err       error
@@ -99,7 +127,12 @@ func TestCommittedUSDFailsClosed(t *testing.T) {
 		{err: nil, od: nil, name: "sp empty term", rec: usdSPRec("", &common.SavingsPlanDetails{HourlyCommitment: 1}), wantCalls: 0},
 		{err: nil, od: usdOffering(1), name: "gcp provider with RI type", rec: common.Recommendation{Provider: common.ProviderGCP, Service: common.ServiceCompute, CommitmentType: common.CommitmentReservedInstance, Count: 1}, wantCalls: 0},
 		{err: nil, od: usdOffering(1), name: "gcp provider with empty type", rec: common.Recommendation{Provider: common.ProviderGCP, Service: common.ServiceCompute, Count: 1}, wantCalls: 0},
-		{err: nil, od: usdOffering(1), name: "gcp cud", rec: common.Recommendation{Provider: common.ProviderGCP, Service: common.ServiceCompute, CommitmentType: common.CommitmentCUD, Count: 1}, wantCalls: 0},
+		{err: nil, od: usdOffering(0), name: "gcp cud zero total", rec: gcpCUD, wantCalls: 1},
+		{err: nil, od: usdOffering(math.NaN()), name: "gcp cud NaN total", rec: gcpCUD, wantCalls: 1},
+		{err: nil, od: &common.OfferingDetails{TotalCost: 1, Currency: "EUR"}, name: "gcp cud EUR", rec: gcpCUD, wantCalls: 1},
+		{err: nil, od: &common.OfferingDetails{TotalCost: 1}, name: "gcp cud empty currency", rec: gcpCUD, wantCalls: 1},
+		{err: errors.New("boom"), od: nil, name: "gcp cud offering error", rec: gcpCUD, wantCalls: 1},
+		{err: nil, od: nil, name: "gcp cud nil details", rec: gcpCUD, wantCalls: 1},
 		{err: nil, od: usdOffering(1), name: "cud on non-gcp provider", rec: common.Recommendation{Provider: common.ProviderAWS, CommitmentType: common.CommitmentCUD, Count: 1}, wantCalls: 0},
 	}
 	for _, tc := range tests {

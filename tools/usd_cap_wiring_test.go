@@ -72,12 +72,31 @@ func TestUSDCapEnvParsing(t *testing.T) {
 	assert.InDelta(t, 1000, got, 1e-9)
 }
 
-func TestUSDCapRefusesRealGCPCUDPurchase(t *testing.T) {
+// Count is vCPUs and already inside the provider total: the cap compares the
+// total as returned, so 1000 passes a 1000 cap and a x4 mutation would refuse.
+func TestUSDCapGCPCUD(t *testing.T) {
 	rec, _, _, _, err := gcpComputeEngineRecommendationFromArgs(validGCPCUDArgs())
 	require.NoError(t, err)
-	fake := &fakeServiceClient{}
+	rec.Count = 4
+	newFake := func() *fakeServiceClient {
+		return &fakeServiceClient{
+			purchaseResult: common.PurchaseResult{Success: true, CommitmentID: "cud-1"},
+			offering:       &common.OfferingDetails{TotalCost: 1000, Currency: "USD"},
+		}
+	}
+
+	t.Setenv(EnvMaxCommitmentUSD, "1000")
+	fake := newFake()
 	_, err = runRealWith(fake, rec)
-	require.ErrorContains(t, err, "go#321")
+	require.NoError(t, err)
+	assert.Equal(t, 1, fake.purchaseCalls)
+	assert.Equal(t, 1, fake.offeringCalls)
+
+	t.Setenv(EnvMaxCommitmentUSD, "999.99")
+	fake = newFake()
+	resolved, err := runRealWith(fake, rec)
+	require.ErrorContains(t, err, EnvMaxCommitmentUSD)
+	assert.True(t, resolved)
 	assert.Zero(t, fake.purchaseCalls)
-	assert.Zero(t, fake.offeringCalls)
+	assert.Equal(t, 1, fake.offeringCalls)
 }

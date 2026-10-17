@@ -131,7 +131,7 @@ func TestGCPComputeEngineCUDPurchaseHandleDryRunNeverCallsProvider(t *testing.T)
 	assert.True(t, resp.DryRun)
 }
 
-func TestGCPComputeEngineCUDPurchaseHandleRealPurchaseRefused(t *testing.T) {
+func TestGCPComputeEngineCUDPurchaseHandleRealPurchase(t *testing.T) {
 	t.Parallel()
 	fake := &fakeServiceClient{purchaseResult: common.PurchaseResult{Success: true, CommitmentID: "cud-1"}}
 	var gotService common.ServiceType
@@ -149,11 +149,12 @@ func TestGCPComputeEngineCUDPurchaseHandleRealPurchaseRefused(t *testing.T) {
 	args.DryRun = boolPtr(false)
 	args.Confirm = boolPtr(true)
 
-	// Real GCP CUD purchases are refused until USD totals exist (go#321).
-	_, _, err := tool.handle(context.Background(), nil, args)
-	require.ErrorContains(t, err, "go#321")
+	_, resp, err := tool.handle(context.Background(), nil, args)
+	require.NoError(t, err)
+	assert.True(t, resp.Success)
 	assert.Equal(t, common.ServiceCompute, gotService)
-	assert.Zero(t, fake.purchaseCalls)
+	assert.Equal(t, 1, fake.purchaseCalls)
+	assert.Equal(t, common.PurchaseSourceMCP, fake.lastOpts.Source)
 }
 
 // TestGCPComputeEngineRecommendationSetsMonthlyPaymentOption pins that the
