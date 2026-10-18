@@ -149,8 +149,11 @@ func (t *archeraComparisonTool) handle(ctx context.Context, _ *mcp.CallToolReque
 	if err != nil {
 		return nil, archeraComparisonDTO{}, archeraError(err, key)
 	}
-	dto, err := buildArcheraComparison(cmp)
+	dto, err := buildArcheraComparison(cmp, cfg.APIKey)
 	if err != nil {
+		if errors.Is(err, errArcheraCredential) {
+			return nil, archeraComparisonDTO{}, archeraError(err, key)
+		}
 		return nil, archeraComparisonDTO{}, err
 	}
 	b, err := json.Marshal(dto)

@@ -20,6 +20,8 @@ import (
 // decimal form (the DTO never rounds or converts to float).
 var ErrArcheraUnrepresentable = errors.New("archera value has no exact decimal representation")
 
+var errArcheraCredential = errors.New("archera comparison withheld: credential material in vendor data")
+
 const (
 	dtoTitle         = "Archera commitment plan comparison (read-only)"
 	currencyNote     = "currency not provided by Archera"
@@ -191,21 +193,39 @@ type archeraComparisonDTO struct {
 	PremiumIncluded       bool                     `json:"premium_included"`
 }
 
-type archeraMapper struct{ err error }
+type archeraMapper struct {
+	err error
+	key insurance.Secret
+}
+
+func (m *archeraMapper) check(s string) {
+	key := strings.TrimSpace(m.key.Reveal())
+	if m.err == nil && key != "" && strings.Contains(archeraSkeleton(s), archeraSkeleton(key)) {
+		m.err = errArcheraCredential
+	}
+}
+
+func (m *archeraMapper) clean(s string) string {
+	m.check(s)
+	return archeraCleanString(s)
+}
 
 func (m *archeraMapper) dec(r *big.Rat) *string {
 	s, err := archeraDecimal(r)
 	if err != nil && m.err == nil {
 		m.err = err
 	}
+	if s != nil {
+		m.check(*s)
+	}
 	return s
 }
 
-func archeraCleanPtr(s *string) *string {
+func (m *archeraMapper) ptr(s *string) *string {
 	if s == nil {
 		return nil
 	}
-	c := archeraCleanString(*s)
+	c := m.clean(*s)
 	return &c
 }
 
@@ -226,11 +246,11 @@ func (m *archeraMapper) delta(d insurance.OfferDelta) archeraDeltaDTO {
 		DiscountRate: m.dec(d.DiscountRate), BreakevenDays: m.dec(d.BreakevenDays)}
 }
 
-func archeraPayment(p *insurance.PaymentOption) *string {
+func (m *archeraMapper) payment(p *insurance.PaymentOption) *string {
 	if p == nil {
 		return nil
 	}
-	s := archeraCleanString(string(*p))
+	s := m.clean(string(*p))
 	return &s
 }
 
@@ -241,14 +261,14 @@ func (m *archeraMapper) offer(e *insurance.OfferEntry) archeraOfferDTO {
 		ps.Status, ps.Source, ps.Evidence = supportedSummary, support.Source, support.Evidence
 	}
 	o := archeraOfferDTO{
-		OfferID: archeraCleanString(e.OfferID), IsCurrent: e.IsCurrent, Provider: archeraCleanString(string(e.Provider)),
-		CommitmentType: archeraCleanString(e.CommitmentType), Region: archeraCleanPtr(e.Region), ContractTerm: archeraCleanPtr(e.ContractTerm),
-		PaymentOption: archeraPayment(e.PaymentOption), LeaseAttached: e.LeaseBacked(), LeaseMenuItemID: archeraCleanPtr(e.LeaseMenuItemID),
+		OfferID: m.clean(e.OfferID), IsCurrent: e.IsCurrent, Provider: m.clean(string(e.Provider)),
+		CommitmentType: m.clean(e.CommitmentType), Region: m.ptr(e.Region), ContractTerm: m.ptr(e.ContractTerm),
+		PaymentOption: m.payment(e.PaymentOption), LeaseAttached: e.LeaseBacked(), LeaseMenuItemID: m.ptr(e.LeaseMenuItemID),
 		ProductSupport: ps, DiscountRate: m.dec(e.DiscountRate), BreakevenDays: m.dec(e.BreakevenDays),
 		Monthly: m.financials(e.Monthly), UpfrontCost: m.dec(e.UpfrontCost), DeltaVsCurrent: m.delta(e.Delta),
 	}
 	if e.GuaranteedDisplayName != nil {
-		o.ArcheraOfferName, o.ArcheraOfferNameNote = archeraCleanPtr(e.GuaranteedDisplayName), offerNameCaveat
+		o.ArcheraOfferName, o.ArcheraOfferNameNote = m.ptr(e.GuaranteedDisplayName), offerNameCaveat
 	}
 	return o
 }
@@ -256,10 +276,10 @@ func (m *archeraMapper) offer(e *insurance.OfferEntry) archeraOfferDTO {
 // buildArcheraComparison maps the contract type to the platform DTO. Money is exact
 // decimal text or null; every vendor string is cleaned and capped. It returns
 // ErrArcheraUnrepresentable when any number has no exact decimal form.
-func buildArcheraComparison(c *insurance.Comparison) (*archeraComparisonDTO, error) {
-	m := &archeraMapper{}
+func buildArcheraComparison(c *insurance.Comparison, key insurance.Secret) (*archeraComparisonDTO, error) {
+	m := &archeraMapper{key: key}
 	out := &archeraComparisonDTO{
-		Title: dtoTitle, PlanID: archeraCleanString(c.PlanID), FetchedAt: c.FetchedAt.UTC().Format(time.RFC3339),
+		Title: dtoTitle, PlanID: m.clean(c.PlanID), FetchedAt: c.FetchedAt.UTC().Format(time.RFC3339),
 		CurrencyNote: currencyNote, PremiumIncluded: true, BasisNote: basisNote, DeltaBasisNote: deltaBasisNote,
 		Current:       m.totals(c.Current),
 		Hypotheticals: []archeraHypotheticalDTO{}, Rows: []archeraRowDTO{},
@@ -268,22 +288,22 @@ func buildArcheraComparison(c *insurance.Comparison) (*archeraComparisonDTO, err
 	for i := range c.Hypotheticals {
 		h := &c.Hypotheticals[i]
 		hd := archeraHypotheticalDTO{
-			ContractTerm: archeraCleanPtr(h.ContractTerm), PaymentOption: archeraCleanString(string(h.PaymentOption)),
+			ContractTerm: m.ptr(h.ContractTerm), PaymentOption: m.clean(string(h.PaymentOption)),
 			Totals: m.totals(h.Totals), LineItems: []archeraLineItemDTO{},
 			DeltaVsCurrent: archeraHypotheticalDeltaDTO{MonthlyNetSavings: m.dec(h.DeltaMonthlyNetSavings),
 				MonthlyCommitmentCost: m.dec(h.DeltaMonthlyCommitmentCost), UpfrontCost: m.dec(h.DeltaUpfrontCost)},
 		}
 		for _, li := range h.LineItems {
 			hd.LineItems = append(hd.LineItems, archeraLineItemDTO{
-				LineItemID: archeraCleanString(li.LineItemID), Reason: archeraCleanString(string(li.Reason)), ActualTerm: archeraCleanPtr(li.ActualTerm),
-				ActualPaymentOption: archeraPayment(li.ActualPaymentOption), ActualCommitmentType: archeraCleanPtr(li.ActualCommitmentType),
+				LineItemID: m.clean(li.LineItemID), Reason: m.clean(string(li.Reason)), ActualTerm: m.ptr(li.ActualTerm),
+				ActualPaymentOption: m.payment(li.ActualPaymentOption), ActualCommitmentType: m.ptr(li.ActualCommitmentType),
 			})
 		}
 		out.Hypotheticals = append(out.Hypotheticals, hd)
 	}
 	for i := range c.Rows {
 		r := &c.Rows[i]
-		rd := archeraRowDTO{LineItemID: archeraCleanString(r.LineItemID), Current: m.offer(&r.Current), Candidates: []archeraOfferDTO{}}
+		rd := archeraRowDTO{LineItemID: m.clean(r.LineItemID), Current: m.offer(&r.Current), Candidates: []archeraOfferDTO{}}
 		for j := range r.Candidates {
 			rd.Candidates = append(rd.Candidates, m.offer(&r.Candidates[j]))
 		}

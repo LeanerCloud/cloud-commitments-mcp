@@ -479,7 +479,7 @@ func TestArcheraComparisonRejectsTooManyLineItemsWithoutRequest(t *testing.T) {
 
 func TestArcheraBuildComparisonFetchedAtIsUTC(t *testing.T) {
 	zone := time.FixedZone("x", 2*3600)
-	dto, err := buildArcheraComparison(&insurance.Comparison{PlanID: testArcheraPlan, FetchedAt: time.Date(2026, 10, 10, 12, 0, 0, 0, zone)})
+	dto, err := buildArcheraComparison(&insurance.Comparison{PlanID: testArcheraPlan, FetchedAt: time.Date(2026, 10, 10, 12, 0, 0, 0, zone)}, insurance.Secret{})
 	require.NoError(t, err)
 	assert.Equal(t, "2026-10-10T10:00:00Z", dto.FetchedAt)
 }
@@ -579,7 +579,7 @@ func TestArcheraErrorMasksKeyAndKeepsContextErrors(t *testing.T) {
 func TestArcheraBuildComparisonPropagatesUnrepresentableMoney(t *testing.T) {
 	c := &insurance.Comparison{PlanID: testArcheraPlan}
 	c.Current.Monthly.CommitmentCostTotal = big.NewRat(1, 3)
-	_, err := buildArcheraComparison(c)
+	_, err := buildArcheraComparison(c, insurance.NewSecret(testArcheraKey))
 	assert.ErrorIs(t, err, ErrArcheraUnrepresentable)
 }
 
