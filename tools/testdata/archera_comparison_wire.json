@@ -80,6 +80,7 @@
    "current": {
     "is_current": true,
     "offer_id": "offer-cur",
+    "selected_amount": 2,
     "offer": {
      "provider": "aws",
      "region": "eu-west-1",
@@ -118,6 +119,7 @@
    "candidates": [
     {
      "is_current": false,
+     "selected_amount": 2,
      "offer_id": "\u001b[31m\u009b\u0085\u200b\u2028HOSTILE_OFFERID_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
      "offer": {
       "provider": "gcp",
@@ -157,6 +159,7 @@
     {
      "is_current": false,
      "offer_id": "offer-c2",
+     "selected_amount": 0.125,
      "offer": {
       "provider": "aws",
       "region": null,
