@@ -324,3 +324,15 @@ func TestArcheraLineItemsPrivacyAndOutputCap(t *testing.T) {
 	assert.Empty(t, result.StructuredContent)
 	assert.Contains(t, resultText(result), "512 KiB")
 }
+
+func TestArcheraLineItemsRejectsUnsafeIDOutsideRequestedWindow(t *testing.T) {
+	setArcheraEnv(t)
+	t.Setenv(EnvArcheraAPIKey, "00000003-aaaa-4aaa-8aaa-aaaaaaaaaaaa")
+	for _, args := range []map[string]any{{"offset": 0, "limit": 1}, {"offset": 0, "limit": 3}, {"offset": 2, "limit": 1}} {
+		result, _, err := callListing(t, listingTransport(t, 3, nil), args)
+		require.NoError(t, err)
+		require.True(t, result.IsError, "%v", args)
+		assert.Empty(t, result.StructuredContent)
+		assert.Contains(t, resultText(result), "line-item identities cannot be safely displayed", "%v", args)
+	}
+}

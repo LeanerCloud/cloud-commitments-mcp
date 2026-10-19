@@ -96,10 +96,17 @@ type archeraListingPage struct {
 	Limit                 int64               `json:"limit"`
 }
 
+func archeraListingIdentityCheck(row insurance.LineItem, key string) error {
+	if archeraSanitizeText(row.ID, key) != row.ID || archeraSanitizeText(row.OfferID, key) != row.OfferID {
+		return errors.New("line-item identities cannot be safely displayed")
+	}
+	return nil
+}
+
 func archeraListingRowDTO(row insurance.LineItem, key string) (archeraListingRow, error) {
 	text := func(s string) string { return archeraSanitizeText(s, key) }
-	if text(row.ID) != row.ID || text(row.OfferID) != row.OfferID {
-		return archeraListingRow{}, errors.New("line-item identities cannot be safely displayed")
+	if err := archeraListingIdentityCheck(row, key); err != nil {
+		return archeraListingRow{}, err
 	}
 	nullable := func(s *string) *string {
 		if s == nil {
@@ -130,6 +137,11 @@ func archeraListingWindow(rows []insurance.LineItem, offset, limit int64, key st
 	total := int64(len(rows))
 	if offset > total {
 		return archeraListingPage{}, errors.New("offset exceeds the total line-item count")
+	}
+	for i := range rows {
+		if err := archeraListingIdentityCheck(rows[i], key); err != nil {
+			return archeraListingPage{}, err
+		}
 	}
 	slices.SortFunc(rows, func(a, b insurance.LineItem) int {
 		if c := strings.Compare(strings.ToLower(a.ID), strings.ToLower(b.ID)); c != 0 {
