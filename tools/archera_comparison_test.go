@@ -34,17 +34,21 @@ const (
 // request, so tests assert the fixed origin and credential placement without
 // any network access.
 type recordingTransport struct {
-	header http.Header
-	reqs   []*http.Request
-	body   []byte
-	status int
-	mu     sync.Mutex
+	respond func(*http.Request) (*http.Response, error)
+	header  http.Header
+	reqs    []*http.Request
+	body    []byte
+	status  int
+	mu      sync.Mutex
 }
 
 func (rt *recordingTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	rt.mu.Lock()
 	defer rt.mu.Unlock()
 	rt.reqs = append(rt.reqs, r)
+	if rt.respond != nil {
+		return rt.respond(r)
+	}
 	h := rt.header.Clone()
 	if h == nil {
 		h = http.Header{}
@@ -83,9 +87,12 @@ func okTransport(body []byte) *recordingTransport {
 // transport and returns the tool result plus every protocol byte exchanged.
 func callArchera(t *testing.T, rt http.RoundTripper, args map[string]any) (*mcp.CallToolResult, string, error) {
 	t.Helper()
-	ctx := context.Background()
+	return callArcheraTool(context.Background(), t, &archeraComparisonTool{httpClient: &http.Client{Transport: rt}}, archeraComparisonName, args)
+}
+
+func callArcheraTool(ctx context.Context, t *testing.T, tool Registration, name string, args map[string]any) (*mcp.CallToolResult, string, error) {
+	t.Helper()
 	s := mcp.NewServer(&mcp.Implementation{Name: "test", Version: "test"}, nil)
-	tool := &archeraComparisonTool{httpClient: &http.Client{Transport: rt}}
 	require.NoError(t, tool.Register(s))
 	ct, st := mcp.NewInMemoryTransports()
 	wire := &syncBuffer{}
@@ -96,7 +103,7 @@ func callArchera(t *testing.T, rt http.RoundTripper, args map[string]any) (*mcp.
 	cs, err := c.Connect(ctx, ct, nil)
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = cs.Close() })
-	res, err := cs.CallTool(ctx, &mcp.CallToolParams{Name: archeraComparisonName, Arguments: args})
+	res, err := cs.CallTool(ctx, &mcp.CallToolParams{Name: name, Arguments: args})
 	// Close both sessions so the server goroutine has stopped writing before
 	// the log is read.
 	_ = cs.Close()
@@ -270,7 +277,7 @@ func TestArcheraComparisonNotConfigured(t *testing.T) {
 			require.NoError(t, err)
 			require.True(t, res.IsError)
 			assert.Zero(t, rt.count())
-			assert.Contains(t, resultText(res), "archera comparison is not configured")
+			assert.Contains(t, resultText(res), "archera is not configured")
 			assert.Contains(t, resultText(res), wantMissing[name])
 			assert.NotContains(t, protocol, testArcheraKey)
 		})
