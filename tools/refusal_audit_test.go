@@ -58,6 +58,9 @@ func refusalCases() []refusalCase {
 			}
 		}},
 		{name: "corrupt budget state file", reason: "corrupt", setup: func(t *testing.T, req *PurchaseRequest) {
+			if !budgetLockSupported {
+				t.Skip("persisted budget needs file locking, unsupported on this platform")
+			}
 			resetBudget(t, "10")
 			path := filepath.Join(t.TempDir(), "budget.json")
 			require.NoError(t, os.WriteFile(path, []byte("{broken"), 0o600))
