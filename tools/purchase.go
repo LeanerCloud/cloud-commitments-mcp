@@ -642,11 +642,12 @@ func preflightRealPurchase(ctx context.Context, req PurchaseRequest, rec common.
 // recordPurchaseRefusal is the single place a pre-purchase refusal leaves a
 // trace: one stderr line and one audit record with status "refused", the
 // refusal text in error_message and the requested scope in the recommendation
-// fields. Nothing was bought, so no commitment ID or provider result exists.
+// fields. Free-form values are %q-quoted so one refusal stays on one stderr
+// line. Nothing was bought, so no commitment ID or provider result exists.
 func recordPurchaseRefusal(req PurchaseRequest, rec common.Recommendation, reason error) {
-	log.Printf("mcp purchase REFUSED: provider=%s scope=%q region=%s service=%s resource=%s count=%d term=%s payment=%s: %v",
+	log.Printf("mcp purchase REFUSED: provider=%s scope=%q region=%q service=%q resource=%q count=%d term=%q payment=%q: %q",
 		rec.Provider, req.CredentialScope, req.Region, rec.Service, rec.ResourceType, rec.Count,
-		rec.Term, rec.PaymentOption, reason)
+		rec.Term, rec.PaymentOption, reason.Error())
 	recordPurchaseAudit(rec, req.CredentialScope, common.PurchaseResult{Error: reason}, auditStatusRefused, false)
 }
 

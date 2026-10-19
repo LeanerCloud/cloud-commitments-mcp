@@ -117,3 +117,35 @@ func TestRefusalWithAuditDisabledKeepsBehavior(t *testing.T) {
 	assert.Equal(t, 1, strings.Count(stderr, "mcp purchase REFUSED"))
 	assert.NotContains(t, stderr, "mcp audit log")
 }
+
+func TestRefusalWithNewlineStaysOnOneStderrLine(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "audit.jsonl")
+	t.Setenv(EnvAuditLog, path)
+	rec := testRecommendation()
+	const reason = "boom\nsecond line"
+	var err error
+	stderr := captureStandardLogger(t, func() {
+		_, err = ExecutePurchase(context.Background(), PurchaseRequest{
+			Region: rec.Region, Recommendation: rec, Confirm: true, CredentialScope: "scope",
+			ResolveClient: func(context.Context) (provider.ServiceClient, error) {
+				return nil, errors.New(reason)
+			},
+		})
+	})
+	require.ErrorContains(t, err, reason)
+
+	var refused []string
+	for _, l := range strings.Split(stderr, "\n") {
+		if strings.Contains(l, "mcp purchase REFUSED") {
+			refused = append(refused, l)
+		}
+	}
+	require.Len(t, refused, 1)
+	assert.Contains(t, refused[0], "second line")
+
+	lines := readAuditLines(t, path)
+	require.Len(t, lines, 1)
+	var got common.AuditRecord
+	require.NoError(t, json.Unmarshal([]byte(lines[0]), &got))
+	assert.Contains(t, got.ErrorMessage, reason)
+}
