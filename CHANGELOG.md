@@ -117,6 +117,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
   that adopt an existing commitment are flagged by the library (go#263, go#264;
   the MCP response shape is unchanged).
 - The RDS purchase tool schema no longer advertises engines the library refuses.
+- A `tools/call` with `"arguments": null` no longer crashes the server; it is
+  treated as `{}` (#95).
 
 - Remove debug console.log from frontend recommendation handler
 - Align pre-commit gocyclo threshold (10) with CI pipeline

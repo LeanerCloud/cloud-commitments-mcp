@@ -392,3 +392,47 @@ func TestToolCallArgumentsNullOrAbsentApplyDefaults(t *testing.T) {
 		})
 	}
 }
+
+func TestNullArgumentsAsEmptyObjectMiddleware(t *testing.T) {
+	var got gosdk.Request
+	called := 0
+	next := func(_ context.Context, _ string, req gosdk.Request) (gosdk.Result, error) {
+		got, called = req, called+1
+		return nil, nil
+	}
+	h := nullArgumentsAsEmptyObject(next)
+	callWith := func(args json.RawMessage) *gosdk.CallToolRequest {
+		return &gosdk.CallToolRequest{Params: &gosdk.CallToolParamsRaw{Name: "x", Arguments: args}}
+	}
+
+	for _, in := range []string{"null", " null ", "null\n"} {
+		called = 0
+		_, err := h(context.Background(), "tools/call", callWith(json.RawMessage(in)))
+		require.NoError(t, err)
+		require.Equal(t, 1, called)
+		assert.Equal(t, []byte("{}"), []byte(got.(*gosdk.CallToolRequest).Params.Arguments), "input %q", in)
+	}
+
+	for _, in := range []json.RawMessage{json.RawMessage(`{"a":1}`), json.RawMessage(`{}`), json.RawMessage(`[]`), nil} {
+		called = 0
+		_, err := h(context.Background(), "tools/call", callWith(in))
+		require.NoError(t, err)
+		require.Equal(t, 1, called)
+		assert.Equal(t, in, got.(*gosdk.CallToolRequest).Params.Arguments, "input %q", in)
+	}
+
+	list := &gosdk.ListToolsRequest{}
+	called = 0
+	_, err := h(context.Background(), "tools/list", list)
+	require.NoError(t, err)
+	assert.Equal(t, 1, called)
+	assert.Same(t, list, got)
+
+	nilParams := &gosdk.CallToolRequest{}
+	called = 0
+	require.NotPanics(t, func() { _, err = h(context.Background(), "tools/call", nilParams) })
+	require.NoError(t, err)
+	assert.Equal(t, 1, called)
+	assert.Same(t, nilParams, got)
+	assert.Nil(t, nilParams.Params)
+}
