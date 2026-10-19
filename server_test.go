@@ -357,3 +357,38 @@ func TestSearchRecommendationsSchemaAdvertisesTermAndPaymentEnums(t *testing.T) 
 	// decoded values rather than the ints the server-side override used.
 	assert.ElementsMatch(t, []any{float64(1), float64(3)}, termEnum)
 }
+
+// TestToolCallArgumentsNullOrAbsentApplyDefaults is the regression guard for
+// #95: an explicit `"arguments": null` on a tool with schema defaults used to
+// panic in the SDK's handler goroutine and kill the server process.
+func TestToolCallArgumentsNullOrAbsentApplyDefaults(t *testing.T) {
+	cases := map[string]any{
+		"null":    json.RawMessage("null"),
+		"omitted": nil,
+		"empty":   map[string]any{},
+	}
+	for name, args := range cases {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			ctx := context.Background()
+
+			server, err := NewServer("test")
+			require.NoError(t, err)
+			clientTransport, serverTransport := gosdk.NewInMemoryTransports()
+			go func() { _ = server.Run(ctx, serverTransport) }()
+
+			client := gosdk.NewClient(&gosdk.Implementation{Name: "test-client"}, nil)
+			session, err := client.Connect(ctx, clientTransport, nil)
+			require.NoError(t, err)
+			defer session.Close()
+
+			result, err := session.CallTool(ctx, &gosdk.CallToolParams{
+				Name:      "cudly_aws_ec2_ri_purchase",
+				Arguments: args,
+			})
+			require.NoError(t, err, "server must stay alive and answer")
+			require.True(t, result.IsError, "required fields are missing, so this is a tool error, never a purchase")
+			require.NoError(t, session.Ping(ctx, nil), "server must still be alive after the call")
+		})
+	}
+}

@@ -6,6 +6,8 @@
 package mcp
 
 import (
+	"bytes"
+	"context"
 	"fmt"
 
 	gosdk "github.com/modelcontextprotocol/go-sdk/mcp"
@@ -53,6 +55,7 @@ func NewServer(version string) (*gosdk.Server, error) {
 	}
 
 	s := gosdk.NewServer(&gosdk.Implementation{Name: ServerName, Version: version}, nil)
+	s.AddReceivingMiddleware(nullArgumentsAsEmptyObject)
 
 	regs := registrations()
 	descriptors := make([]tools.Descriptor, 0, len(regs)+1)
@@ -74,4 +77,17 @@ func NewServer(version string) (*gosdk.Server, error) {
 	}
 
 	return s, nil
+}
+
+// nullArgumentsAsEmptyObject rewrites an explicit `"arguments": null` on
+// tools/call to {} because go-sdk v1.8.0 (mcp/tool.go:98-117) unmarshals it
+// into a nil map and jsonschema-go ApplyDefaults then panics, killing the server.
+func nullArgumentsAsEmptyObject(next gosdk.MethodHandler) gosdk.MethodHandler {
+	return func(ctx context.Context, method string, req gosdk.Request) (gosdk.Result, error) {
+		if call, ok := req.(*gosdk.CallToolRequest); ok && call.Params != nil &&
+			bytes.Equal(bytes.TrimSpace(call.Params.Arguments), []byte("null")) {
+			call.Params.Arguments = []byte("{}")
+		}
+		return next(ctx, method, req)
+	}
 }
