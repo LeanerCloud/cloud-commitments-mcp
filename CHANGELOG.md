@@ -7,6 +7,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- `CUDLY_MCP_BUDGET_STATE`: optional state file that persists the cumulative
+  purchase budget per UTC calendar month, survives restarts and is shared by
+  processes using the same path (flock, atomic writes). A corrupt or unreadable
+  file refuses real purchases. Unset keeps the in-memory budget. Reset by
+  deleting the file with all servers stopped.
 - The purchase audit log records `status: "refused"` (reason in `error_message`) and
   stderr logs `mcp purchase REFUSED` for every real purchase refused before the
   provider call: disabled, spend limits, missing scope, client resolution or
