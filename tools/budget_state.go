@@ -26,10 +26,10 @@ const budgetLockTimeout = 10 * time.Second
 // Reservations is a purchase that was started and not settled, and counts as
 // spent until an operator resets the file.
 type budgetState struct {
-	Version      int                 `json:"version"`
 	Month        string              `json:"month"`
-	SpentUSD     float64             `json:"spent_usd"`
 	Reservations []budgetReservEntry `json:"reservations"`
+	SpentUSD     float64             `json:"spent_usd"`
+	Version      int                 `json:"version"`
 }
 
 type budgetReservEntry struct {
@@ -70,8 +70,8 @@ func (s budgetState) validate() error {
 // every server process that points at the same path. All access is a
 // read-modify-write under an flock on path+".lock".
 type fileBudget struct {
-	path string
 	now  func() time.Time
+	path string
 }
 
 func newFileBudget(path string) *fileBudget {
@@ -151,13 +151,13 @@ func (f *fileBudget) save(st budgetState) error {
 	_, werr := tmp.Write(append(data, '\n'))
 	serr := tmp.Sync()
 	cerr := tmp.Close()
-	if err := errors.Join(werr, serr, cerr); err != nil {
+	if jerr := errors.Join(werr, serr, cerr); jerr != nil {
 		_ = os.Remove(tmpName) // #nosec G703 -- temp file we created in the operator-set directory
-		return fmt.Errorf("write budget state temp file %s: %w", tmpName, err)
+		return fmt.Errorf("write budget state temp file %s: %w", tmpName, jerr)
 	}
-	if err := os.Rename(tmpName, f.path); err != nil { // #nosec G703 -- operator-set path, not tool input
+	if rerr := os.Rename(tmpName, f.path); rerr != nil { // #nosec G703 -- operator-set path, not tool input
 		_ = os.Remove(tmpName) // #nosec G703 -- temp file we created in the operator-set directory
-		return fmt.Errorf("replace budget state file %s: %w", f.path, err)
+		return fmt.Errorf("replace budget state file %s: %w", f.path, rerr)
 	}
 	d, err := os.Open(dir) // #nosec G304 G703 -- parent of the operator-set path
 	if err != nil {

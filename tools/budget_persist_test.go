@@ -12,9 +12,9 @@ import (
 	"github.com/LeanerCloud/cloud-commitments-go/pkg/common"
 )
 
-func persistedBudget(t *testing.T, limit string) string {
+func persistedBudget(t *testing.T) string {
 	t.Helper()
-	resetBudget(t, limit)
+	resetBudget(t, "100")
 	path := filepath.Join(t.TempDir(), "budget.json")
 	t.Setenv(EnvBudgetState, path)
 	t.Setenv(EnvAuditLog, "")
@@ -22,7 +22,7 @@ func persistedBudget(t *testing.T, limit string) string {
 }
 
 func TestPersistedBudgetSurvivesRestart(t *testing.T) {
-	path := persistedBudget(t, "100")
+	path := persistedBudget(t)
 	fake := pricedFake(60, common.PurchaseResult{Success: true, CommitmentID: "id"}, nil)
 	require.NoError(t, runWithNonce(fake, "a"))
 
@@ -35,7 +35,7 @@ func TestPersistedBudgetSurvivesRestart(t *testing.T) {
 }
 
 func TestPersistedBudgetFailedPurchaseKeepsCounted(t *testing.T) {
-	path := persistedBudget(t, "100")
+	path := persistedBudget(t)
 	fake := pricedFake(60, common.PurchaseResult{}, assert.AnError)
 	require.Error(t, runWithNonce(fake, "a"))
 	st := readState(t, path)
@@ -44,7 +44,7 @@ func TestPersistedBudgetFailedPurchaseKeepsCounted(t *testing.T) {
 }
 
 func TestPersistedBudgetResetsNextMonth(t *testing.T) {
-	persistedBudget(t, "100")
+	persistedBudget(t)
 	old := budgetNow
 	t.Cleanup(func() { budgetNow = old })
 	fake := pricedFake(100, common.PurchaseResult{Success: true, CommitmentID: "id"}, nil)
@@ -59,7 +59,7 @@ func TestPersistedBudgetResetsNextMonth(t *testing.T) {
 }
 
 func TestPersistedBudgetCorruptFileRefusesBeforePurchase(t *testing.T) {
-	path := persistedBudget(t, "100")
+	path := persistedBudget(t)
 	require.NoError(t, os.WriteFile(path, []byte("{broken"), 0o600))
 	fake := pricedFake(1, common.PurchaseResult{Success: true, CommitmentID: "id"}, nil)
 	err := runWithNonce(fake, "a")
