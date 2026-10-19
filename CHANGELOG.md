@@ -7,6 +7,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- The purchase audit log records `status: "refused"` (reason in `error_message`) and
+  stderr logs `mcp purchase REFUSED` for every real purchase refused before the
+  provider call: disabled, spend limits, missing scope, client resolution or
+  pricing failure.
 - `CUDLY_MCP_BUDGET_USD`: a cumulative per-process USD purchase budget. It
   is in memory (resets on restart, not shared, blind to purchases made
   elsewhere); unknown outcomes count as spent.

@@ -614,6 +614,42 @@ func authorizeRealPurchase(req PurchaseRequest, rec common.Recommendation) (purc
 	return purchaseLimits{usd: usdLimit, budget: budget}, nil
 }
 
+// preflightRealPurchase runs every gate that can refuse a real purchase
+// before PurchaseCommitment is called: authorizeRealPurchase, client
+// resolution, the USD cap and the cumulative budget. Any error it returns is
+// a refusal, and ExecutePurchase audits it once via recordPurchaseRefusal.
+func preflightRealPurchase(ctx context.Context, req PurchaseRequest, rec common.Recommendation) (provider.ServiceClient, *budgetReservation, error) {
+	limits, err := authorizeRealPurchase(req, rec)
+	if err != nil {
+		return nil, nil, err
+	}
+	client, err := req.ResolveClient(ctx)
+	if err != nil {
+		return nil, nil, fmt.Errorf("resolve %s service client: %w", rec.Provider, err)
+	}
+	usd, err := enforceUSDCap(ctx, client, rec, limits.usd)
+	if err != nil {
+		return nil, nil, err
+	}
+	reservation, err := processBudget.reserve(usd, limits.budget)
+	if err != nil {
+		return nil, nil, err
+	}
+	log.Printf("mcp budget: reserved %.2f of %.2f USD (committed %.2f)", usd, limits.budget, processBudget.committedUSD())
+	return client, reservation, nil
+}
+
+// recordPurchaseRefusal is the single place a pre-purchase refusal leaves a
+// trace: one stderr line and one audit record with status "refused", the
+// refusal text in error_message and the requested scope in the recommendation
+// fields. Nothing was bought, so no commitment ID or provider result exists.
+func recordPurchaseRefusal(req PurchaseRequest, rec common.Recommendation, reason error) {
+	log.Printf("mcp purchase REFUSED: provider=%s scope=%q region=%s service=%s resource=%s count=%d term=%s payment=%s: %v",
+		rec.Provider, req.CredentialScope, req.Region, rec.Service, rec.ResourceType, rec.Count,
+		rec.Term, rec.PaymentOption, reason)
+	recordPurchaseAudit(rec, req.CredentialScope, common.PurchaseResult{Error: reason}, auditStatusRefused, false)
+}
+
 // ExecutePurchase runs the shared dry_run/confirm safety gate, then every
 // gate in authorizeRealPurchase (operator opt-in via EnvEnableRealPurchases,
 // and a determinable target account), and for a real purchase that clears
@@ -643,31 +679,11 @@ func ExecutePurchase(ctx context.Context, req PurchaseRequest) (*PurchaseRespons
 		}, nil
 	}
 
-	// Named authErr rather than err: `err :=` here trips govet's shadow check
-	// against the err declared above, while `err =` trips gocritic's
-	// sloppyReassign. A distinct name satisfies both (same reason as
-	// validateSavingsPlanArgs' commitErr in aws_savingsplans.go).
-	limits, authErr := authorizeRealPurchase(req, rec)
-	if authErr != nil {
-		return nil, authErr
+	client, reservation, refusal := preflightRealPurchase(ctx, req, rec)
+	if refusal != nil {
+		recordPurchaseRefusal(req, rec, refusal)
+		return nil, refusal
 	}
-
-	client, err := req.ResolveClient(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("resolve %s service client: %w", rec.Provider, err)
-	}
-
-	// Like a ResolveClient failure, a cap refusal happens before any purchase
-	// attempt and writes no audit record.
-	usd, capErr := enforceUSDCap(ctx, client, rec, limits.usd)
-	if capErr != nil {
-		return nil, capErr
-	}
-	reservation, budgetErr := processBudget.reserve(usd, limits.budget)
-	if budgetErr != nil {
-		return nil, budgetErr
-	}
-	log.Printf("mcp budget: reserved %.2f of %.2f USD (committed %.2f)", usd, limits.budget, processBudget.committedUSD())
 
 	token := common.DeriveIdempotencyToken(idempotencyKeyFor(req.Region, rec, req.CredentialScope, req.Nonce), 0)
 	opts := common.PurchaseOptions{

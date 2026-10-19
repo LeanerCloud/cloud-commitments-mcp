@@ -34,8 +34,8 @@ const EnvAuditLog = "CUDLY_MCP_AUDIT_LOG"
 // lifetime, matching how a single CLI invocation shares one run.
 var auditRunID = uuid.NewString()
 
-// auditStatusSuccess, auditStatusError, auditStatusUnknown and
-// auditStatusSkipped are the statuses this server ever writes. A dry run is
+// auditStatusSuccess, auditStatusError, auditStatusUnknown,
+// auditStatusSkipped and auditStatusRefused are the statuses this server ever writes. A dry run is
 // skipped; a provider result is successful only when Success is true and
 // Error is nil; a failure wrapping common.ErrOutcomeUnknown is unknown (the
 // request may have reached the cloud and the commitment may exist); every
@@ -47,6 +47,9 @@ const (
 	auditStatusError   = "error"
 	auditStatusSkipped = "skipped"
 	auditStatusUnknown = "unknown"
+	// auditStatusRefused is a real purchase a gate refused before any
+	// provider purchase call; error_message carries the reason.
+	auditStatusRefused = "refused"
 )
 
 // auditStatusFor maps a provider PurchaseResult to the audit status it
