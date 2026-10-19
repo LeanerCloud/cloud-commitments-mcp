@@ -88,14 +88,14 @@
       "type": "number",
       "title": "Maximum hourly commitment (USD/hour)",
       "description": "Per-call ceiling on a Savings Plan hourly commitment. Required before any real Savings Plan purchase. Applies per call, not cumulatively.",
-      "min": 1,
+      "min": 0,
       "required": false
     },
     "max_memory_gb": {
       "type": "number",
       "title": "Maximum committed memory (GB)",
       "description": "Per-call ceiling on memory for a GCP CUD. Required before any real GCP CUD purchase. Applies per call, not cumulatively.",
-      "min": 1,
+      "min": 0,
       "required": false
     },
     "max_commitment_usd": {

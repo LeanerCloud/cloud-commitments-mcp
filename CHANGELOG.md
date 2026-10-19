@@ -108,6 +108,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed
 
+- The MCPB bundle no longer blocks sub-unit spend caps (for example 0.5 USD/h):
+  the hourly-commitment and memory caps now declare `min` 0, and the server
+  still rejects values `<= 0`.
+
 - Bumped the four cloud-commitments-go modules to 8a3d92b, which brings these
   purchase safeguards: RDS purchases match the offering exactly and refuse
   Oracle and SQL Server (go#300); EC2 and Redshift purchases are sent once and
