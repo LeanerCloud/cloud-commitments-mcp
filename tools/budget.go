@@ -20,8 +20,11 @@ var processBudget = &budgetLedger{}
 
 // budgetReservation holds part of the budget while a purchase is in flight.
 type budgetReservation struct {
-	ledger *budgetLedger
-	usd    float64
+	ledger    *budgetLedger // in-memory mode
+	file      *fileBudget   // persisted mode (EnvBudgetState)
+	id        string        // file mode: reservation ID in the state file
+	usd       float64
+	committed float64 // USD settled before this reservation, for logging
 }
 
 // reserve refuses when committed+reserved+usd would exceed limit (equal is
@@ -34,11 +37,15 @@ func (l *budgetLedger) reserve(usd, limit float64) (*budgetReservation, error) {
 			usd, EnvBudgetUSD, limit, max(0, limit-l.committed-l.reserved))
 	}
 	l.reserved += usd
-	return &budgetReservation{ledger: l, usd: usd}, nil
+	return &budgetReservation{ledger: l, usd: usd, committed: l.committed}, nil
 }
 
 // settle moves the reservation into committed when spent, otherwise releases it.
 func (r *budgetReservation) settle(spent bool) {
+	if r.file != nil {
+		r.file.settle(r.id, r.usd, spent)
+		return
+	}
 	r.ledger.mu.Lock()
 	defer r.ledger.mu.Unlock()
 	r.ledger.reserved -= r.usd
