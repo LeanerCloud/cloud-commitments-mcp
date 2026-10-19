@@ -115,7 +115,7 @@
     "archera_api_key": {
       "type": "string",
       "title": "Archera API key",
-      "description": "Optional. Enables the read-only Archera plan comparison tool. Sent only to https://api.archera.ai. Leave empty to keep the tool disabled.",
+      "description": "Optional. Enables the read-only Archera plan listing and comparison tools. Sent only to https://api.archera.ai. Leave empty to keep the tools disabled.",
       "sensitive": true,
       "required": false,
       "default": ""
@@ -130,7 +130,7 @@
     "archera_plan_id": {
       "type": "string",
       "title": "Archera commitment plan ID",
-      "description": "Optional. Archera commitment plan UUID to compare, used with the API key above.",
+      "description": "Optional. Archera commitment plan UUID to list or compare, used with the API key above.",
       "required": false,
       "default": ""
     }

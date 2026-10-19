@@ -21,7 +21,7 @@ const (
 	archeraComparisonTitle = "Archera commitment plan comparison (read-only)"
 
 	// EnvArcheraAPIKey, EnvArcheraOrgID and EnvArcheraPlanID configure the
-	// Archera comparison tool. They are read from the server's environment on
+	// Archera read-only tools. They are read from the server's environment on
 	// every call and never from tool arguments, which the model controls.
 	EnvArcheraAPIKey = "ARCHERA_API_KEY" // #nosec G101 -- environment variable name, not a credential
 	EnvArcheraOrgID  = "ARCHERA_ORG_ID"
@@ -125,7 +125,7 @@ func archeraConfig() (cfg insurance.Config, planID string, err error) {
 	planID = get(EnvArcheraPlanID)
 	if len(missing) > 0 {
 		return insurance.Config{}, "", fmt.Errorf(
-			"archera comparison is not configured: set %s, %s and %s in the server environment (missing: %s)",
+			"archera is not configured: set %s, %s and %s in the server environment (missing: %s)",
 			EnvArcheraAPIKey, EnvArcheraOrgID, EnvArcheraPlanID, strings.Join(missing, ", "))
 	}
 	return cfg, planID, nil

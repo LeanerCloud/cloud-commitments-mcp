@@ -232,6 +232,49 @@ func TestListCommitmentActionsIncludesItself(t *testing.T) {
 	}
 	assert.Contains(t, names, "cudly_list_commitment_actions",
 		"the catalog cudly_list_commitment_actions returns must include its own entry, got: %v", names)
+	assert.Contains(t, names, "cudly_archera_line_items")
+	for _, action := range catalog.Actions {
+		if action.Name == "cudly_archera_line_items" {
+			assert.Equal(t, "insurance", action.Product)
+			assert.Equal(t, "line_items", action.Action)
+			assert.False(t, action.RealPurchaseEnabled)
+			assert.NotEmpty(t, action.ExamplePrompts)
+			assert.Contains(t, action.Description, "cudly_archera_comparison")
+		}
+	}
+}
+
+func TestArcheraListingRootDiscoveryWithoutConfiguration(t *testing.T) {
+	t.Setenv(tools.EnvArcheraAPIKey, "")
+	t.Setenv(tools.EnvArcheraOrgID, "")
+	t.Setenv(tools.EnvArcheraPlanID, "")
+	ctx := context.Background()
+	server, err := NewServer("test")
+	require.NoError(t, err, "discovery must not require a vendor request or credentials")
+	ct, st := gosdk.NewInMemoryTransports()
+	ss, err := server.Connect(ctx, st, nil)
+	require.NoError(t, err)
+	defer ss.Close()
+	cs, err := gosdk.NewClient(&gosdk.Implementation{Name: "listing-root-test"}, nil).Connect(ctx, ct, nil)
+	require.NoError(t, err)
+	defer cs.Close()
+	listed, err := cs.ListTools(ctx, nil)
+	require.NoError(t, err)
+	var listing *gosdk.Tool
+	for _, tool := range listed.Tools {
+		if tool.Name == "cudly_archera_line_items" {
+			listing = tool
+		}
+	}
+	require.NotNil(t, listing)
+	require.NotNil(t, listing.Annotations)
+	assert.True(t, listing.Annotations.ReadOnlyHint)
+	assert.True(t, *listing.Annotations.OpenWorldHint)
+	assert.False(t, *listing.Annotations.DestructiveHint)
+	result, err := cs.CallTool(ctx, &gosdk.CallToolParams{Name: listing.Name, Arguments: map[string]any{}})
+	require.NoError(t, err)
+	require.True(t, result.IsError)
+	assert.Empty(t, result.StructuredContent)
 }
 
 func TestRealPurchaseToolsDocumentMoneyImpactAndDryRun(t *testing.T) {

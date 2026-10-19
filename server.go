@@ -33,6 +33,7 @@ func registrations() []tools.Registration {
 		tools.NewAzureComputeRIPurchaseTool(),
 		tools.NewGCPComputeEngineCUDPurchaseTool(),
 		tools.NewArcheraComparisonTool(),
+		tools.NewArcheraLineItemsTool(),
 	}
 }
 
