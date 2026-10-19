@@ -134,6 +134,36 @@ Every other provider's purchase tool (`cudly_aws_savingsplans_purchase`, `cudly_
 
 - `cudly_archera_comparison` is read-only and has no purchase path: it issues GET requests to `https://api.archera.ai` and nothing else. It is off by default. It needs `ARCHERA_API_KEY`, `ARCHERA_ORG_ID` and `ARCHERA_PLAN_ID` (UUIDs) in the server's environment, read on every call and never accepted as tool arguments; with any of them unset or blank the call returns an error naming the missing variables and sends no request. The key goes only into the `x-api-key` header, is never logged or returned, and vendor error text is not echoed. It is not gated by `CUDLY_MCP_ENABLE_REAL_PURCHASES` or the spend caps, writes no audit record, and never retries: on HTTP 429 the error reports the vendor's `Retry-After` (capped at 24 hours). Money is exact decimal text, `null` means unknown (never zero), the API states no currency, and the response carries both Archera disclosures. A comparison is a hypothetical rollup, not a bindable quote.
 
+`cudly_archera_line_items` explicitly discovers UUIDs to pass unchanged to a later
+`cudly_archera_comparison` call. It uses the same operator environment and fixed
+HTTPS origin, reads configuration per call, performs GETs only, and never writes
+a purchase audit record. Starting the server and listing its tools do not fetch
+Archera data. Listing never calls comparison or purchases automatically.
+
+The only arguments are `offset` (integer, default 0, nonnegative) and `limit`
+(integer, default 100, range 1..200; explicit zero is invalid). Every invocation
+fetches every vendor page before sorting UUIDs case-insensitively and returning
+the local window. Even `limit: 1` fetches the complete plan. Offset equal to the
+total returns an empty array; offset beyond it fails. `next_offset` is null at
+the end. Following it repeats the full read, with no atomic snapshot guarantee.
+
+The response includes total, offset, limit, next_offset, line_items, a scope note
+and both partnership disclosures. Each row exposes line_item_id, offer_id,
+is_selected, selected_quantity, selected_commitment, contract_term,
+payment_option, provider, commitment_type (the contract specification's value),
+region, instance_family, native_plan_type and native_duration_seconds. Quantities
+and finite decimals are exact strings, including explicit zero. Missing offer
+dimensions are null. No currency, inferred matching, recommendation association
+or cross-account association is supplied. Account, organization, plan and raw
+vendor/catalog identifiers are omitted. Vendor text is cleaned, bounded and key
+masked; IDs are preserved or the whole result is rejected if unsafe to display.
+
+The complete fetch has one 30-second deadline and the shared 8 MiB response
+budget. Invalid pagination, duplicate UUIDs, malformed pages, cancellation or a
+late-page failure return an error with no partial rows. Redirects and automatic
+retries are disabled; rate-limit errors report bounded Retry-After. Serialized
+output is capped at 512 KiB; choose a smaller local limit if that cap is reached.
+
 ### What this server does NOT give you
 
 Understand these before enabling real purchases, especially in a shared or production account:
