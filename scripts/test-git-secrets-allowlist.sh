@@ -40,6 +40,20 @@ if ! bash scripts/setup-git-secrets.sh > "$tmp/setup.log" 2>&1; then
     cat "$tmp/setup.log" >&2
     exit 1
 fi
+# Re-running setup on an already configured repo must succeed and leave the
+# registered pattern set and provider list unchanged (#79).
+git config --get-all secrets.patterns >"$tmp/patterns.first"
+git config --get-all secrets.providers >"$tmp/providers.first"
+if ! bash scripts/setup-git-secrets.sh > "$tmp/setup2.log" 2>&1; then
+    echo "scripts/setup-git-secrets.sh failed on re-run:" >&2
+    cat "$tmp/setup2.log" >&2
+    exit 1
+fi
+if ! git config --get-all secrets.patterns | cmp -s - "$tmp/patterns.first" ||
+    ! git config --get-all secrets.providers | cmp -s - "$tmp/providers.first"; then
+    echo "re-running setup changed the registered patterns or providers" >&2
+    exit 1
+fi
 # Same HOME-isolation reason: drop the provider before any further scan.
 git config --unset-all secrets.providers
 

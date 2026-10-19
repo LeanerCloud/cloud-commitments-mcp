@@ -93,28 +93,38 @@ git secrets --register-aws
 echo ""
 echo "Adding custom secret patterns..."
 
+# `git secrets --add` exits non-zero when the pattern is already registered,
+# which under `set -e` aborted a re-run. Skip patterns already present
+# (exact, fixed-string match) so the script is idempotent.
+add_pattern() {
+    if git config --get-all secrets.patterns | grep -qxF -- "$1"; then
+        return 0
+    fi
+    git secrets --add -- "$1"
+}
+
 # AWS patterns
-git secrets --add 'AKIA[0-9A-Z]{16}'                                    # AWS Access Key ID
+add_pattern 'AKIA[0-9A-Z]{16}'                                    # AWS Access Key ID
 # macOS git grep has no \s, so the two --register-aws patterns that use it miss spaced assignments
-git secrets --add '("|'\'')?(AWS|aws|Aws)?_?(SECRET|secret|Secret)?_?(ACCESS|access|Access)?_?(KEY|key|Key)("|'\'')?[[:space:]]*(:|=>|=)[[:space:]]*("|'\'')?[A-Za-z0-9/\+=]{40}("|'\'')?'
-git secrets --add '("|'\'')?(AWS|aws|Aws)?_?(ACCOUNT|account|Account)_?(ID|id|Id)?("|'\'')?[[:space:]]*(:|=>|=)[[:space:]]*("|'\'')?[0-9]{4}\-?[0-9]{4}\-?[0-9]{4}("|'\'')?'
-git secrets --add 'aws(.{0,20})?['\''"][0-9a-zA-Z/+]{40}['\''"]'       # AWS Credentials
+add_pattern '("|'\'')?(AWS|aws|Aws)?_?(SECRET|secret|Secret)?_?(ACCESS|access|Access)?_?(KEY|key|Key)("|'\'')?[[:space:]]*(:|=>|=)[[:space:]]*("|'\'')?[A-Za-z0-9/\+=]{40}("|'\'')?'
+add_pattern '("|'\'')?(AWS|aws|Aws)?_?(ACCOUNT|account|Account)_?(ID|id|Id)?("|'\'')?[[:space:]]*(:|=>|=)[[:space:]]*("|'\'')?[0-9]{4}\-?[0-9]{4}\-?[0-9]{4}("|'\'')?'
+add_pattern 'aws(.{0,20})?['\''"][0-9a-zA-Z/+]{40}['\''"]'       # AWS Credentials
 
 # GCP patterns
-git secrets --add 'AIza[0-9A-Za-z_-]{35}'                              # GCP API Key
+add_pattern 'AIza[0-9A-Za-z_-]{35}'                              # GCP API Key
 
 # Azure patterns
-git secrets --add 'DefaultEndpointsProtocol=https'                      # Azure Connection String
+add_pattern 'DefaultEndpointsProtocol=https'                      # Azure Connection String
 
 # Generic secrets (require quoted values to avoid matching variable declarations)
-git secrets --add 'password[[:space:]]*[=:][[:space:]]*['\''"][^'\''"]{8,}'             # Password with quoted value
-git secrets --add 'api[_-]?key[[:space:]]*[=:][[:space:]]*['\''"][^'\''"]{8,}'         # API key with quoted value
-git secrets --add 'secret[_-]?key[[:space:]]*[=:][[:space:]]*['\''"][^'\''"]{8,}'      # Secret key with quoted value
-git secrets --add 'BEGIN[[:space:]]((RSA|DSA|EC|OPENSSH|ENCRYPTED)[[:space:]])?PRIVATE[[:space:]]KEY-----'  # PEM private keys
+add_pattern 'password[[:space:]]*[=:][[:space:]]*['\''"][^'\''"]{8,}'             # Password with quoted value
+add_pattern 'api[_-]?key[[:space:]]*[=:][[:space:]]*['\''"][^'\''"]{8,}'         # API key with quoted value
+add_pattern 'secret[_-]?key[[:space:]]*[=:][[:space:]]*['\''"][^'\''"]{8,}'      # Secret key with quoted value
+add_pattern 'BEGIN[[:space:]]((RSA|DSA|EC|OPENSSH|ENCRYPTED)[[:space:]])?PRIVATE[[:space:]]KEY-----'  # PEM private keys
 
 # Database connection strings
 # The match must end on a host character: git-secrets scans with -w, which drops a match followed by a word character
-git secrets --add '(postgres(ql)?|mysql|mongodb(\+srv)?)://[^:/@[:space:]]+:[^@/[:space:]$<{][^@/[:space:]]*@[^[:space:]'\''"/?#]+'  # Database DSN with an inline password
+add_pattern '(postgres(ql)?|mysql|mongodb(\+srv)?)://[^:/@[:space:]]+:[^@/[:space:]$<{][^@/[:space:]]*@[^[:space:]'\''"/?#]+'  # Database DSN with an inline password
 
 # Allowed patterns live in .gitallowed (versioned, applied by every scan, including CI).
 # They are matched against the whole "path:line:content" scanner output line, so an entry
