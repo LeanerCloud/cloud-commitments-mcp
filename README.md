@@ -142,7 +142,7 @@ Archera data. Listing never calls comparison or purchases automatically.
 
 The only arguments are `offset` (integer, default 0, nonnegative) and `limit`
 (integer, default 100, range 1..200; explicit zero is invalid). Every invocation
-fetches every vendor page before sorting UUIDs case-insensitively and returning
+fetches every vendor page before sorting UUIDs case-insensitively (raw ID breaks ties) and returning
 the local window. Even `limit: 1` fetches the complete plan. Offset equal to the
 total returns an empty array; offset beyond it fails. `next_offset` is null at
 the end. Following it repeats the full read, with no atomic snapshot guarantee.

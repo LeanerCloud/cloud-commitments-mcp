@@ -132,7 +132,10 @@ func archeraListingWindow(rows []insurance.LineItem, offset, limit int64, key st
 		return archeraListingPage{}, errors.New("offset exceeds the total line-item count")
 	}
 	slices.SortFunc(rows, func(a, b insurance.LineItem) int {
-		return strings.Compare(strings.ToLower(a.ID), strings.ToLower(b.ID))
+		if c := strings.Compare(strings.ToLower(a.ID), strings.ToLower(b.ID)); c != 0 {
+			return c
+		}
+		return strings.Compare(a.ID, b.ID)
 	})
 	end := offset + min(limit, total-offset)
 	page := archeraListingPage{

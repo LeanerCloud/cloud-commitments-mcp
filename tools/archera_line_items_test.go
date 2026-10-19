@@ -19,6 +19,8 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/LeanerCloud/cloud-commitments-go/pkg/insurance"
 )
 
 func listingWire(t *testing.T, number int) string {
@@ -65,6 +67,17 @@ func listingTransport(t *testing.T, total int, edit func(*http.Response, *http.R
 func callListing(t *testing.T, rt http.RoundTripper, args map[string]any) (*mcp.CallToolResult, string, error) {
 	t.Helper()
 	return callArcheraTool(context.Background(), t, &archeraLineItemsTool{httpClient: &http.Client{Transport: rt}}, archeraLineItemsName, args)
+}
+
+func TestArcheraListingWindowOrdersCaseInsensitivelyWithRawTieBreak(t *testing.T) {
+	rows := []insurance.LineItem{{ID: "b"}, {ID: "a"}, {ID: "B"}, {ID: "A"}, {ID: "c"}}
+	_, err := archeraListingWindow(rows, 0, 0, "")
+	require.NoError(t, err)
+	got := make([]string, 0, len(rows))
+	for _, row := range rows {
+		got = append(got, row.ID)
+	}
+	assert.Equal(t, []string{"A", "a", "B", "b", "c"}, got)
 }
 
 func TestArcheraLineItemsWindowsAndIDReuse(t *testing.T) {
@@ -151,7 +164,7 @@ func TestArcheraLineItemsSchemaAndRuntimeBounds(t *testing.T) {
 	require.Len(t, schema, 2, "no credential, organization, plan or URL arguments")
 	limit := schema["limit"].(map[string]any)
 	assert.Equal(t, "integer", limit["type"])
-	assert.NotContains(t, limit, "default", "schema defaults panic the SDK when arguments are omitted")
+	assert.NotContains(t, limit, "default", "schema defaults panic the SDK when the call sends explicit `\"arguments\": null` (omitted arguments are safe)")
 	assert.EqualValues(t, 1, limit["minimum"])
 	assert.EqualValues(t, 200, limit["maximum"])
 	assert.EqualValues(t, 0, schema["offset"].(map[string]any)["minimum"])
