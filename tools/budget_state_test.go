@@ -185,6 +185,7 @@ func TestFileBudgetCorruptFileRefuses(t *testing.T) {
 		"empty":           "",
 		"trailing":        `{"version":1,"month":"2026-10","spent_usd":0,"reservations":[]} x`,
 		"unknown field":   `{"version":1,"month":"2026-10","spent_usd":0,"reservations":[],"extra":1}`,
+		"duplicate ids":   `{"version":1,"month":"2026-10","spent_usd":0,"reservations":[{"id":"a","usd":1},{"id":"a","usd":1}]}`,
 		"bad version":     `{"version":9,"month":"2026-10","spent_usd":0,"reservations":[]}`,
 		"bad month":       `{"version":1,"month":"October","spent_usd":0,"reservations":[]}`,
 		"negative spent":  `{"version":1,"month":"2026-10","spent_usd":-5,"reservations":[]}`,
@@ -225,4 +226,63 @@ func TestFileBudgetPermissions(t *testing.T) {
 	left, err := filepath.Glob(path + ".tmp-*")
 	require.NoError(t, err)
 	assert.Empty(t, left)
+}
+
+func TestFileBudgetRolloverCarriesUnsettledReservations(t *testing.T) {
+	path := stateFile(t)
+	fb := newFileBudget(path)
+	fb.now = fixedClock("2026-10-15T12:00:00Z")
+	r, err := fb.reserve(90, 100) // never settled: the process crashed
+	require.NoError(t, err)
+
+	fb.now = fixedClock("2026-11-01T00:00:00Z")
+	_, err = fb.reserve(20, 100)
+	require.ErrorContains(t, err, EnvBudgetUSD)
+	require.Len(t, readState(t, path).Reservations, 1)
+
+	r.settle(false) // resolving it in the new month frees the headroom
+	_, err = fb.reserve(20, 100)
+	require.NoError(t, err)
+}
+
+func TestFileBudgetFutureMonthFileRefusesUnchanged(t *testing.T) {
+	const content = `{"version":1,"month":"2099-01","spent_usd":5,"reservations":[]}`
+	path := stateFile(t)
+	require.NoError(t, ensureAuditLogDirectory(path))
+	require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+	_, err := newFileBudget(path).reserve(1, 100)
+	require.ErrorContains(t, err, "2099-01")
+	require.ErrorContains(t, err, "current UTC month")
+	got, rerr := os.ReadFile(path)
+	require.NoError(t, rerr)
+	assert.Equal(t, content, string(got))
+}
+
+func TestFileBudgetClockBehindFileRefuses(t *testing.T) {
+	path := stateFile(t)
+	fb := newFileBudget(path)
+	fb.now = fixedClock("2026-11-02T00:00:00Z")
+	r, err := fb.reserve(10, 100)
+	require.NoError(t, err)
+	r.settle(true)
+	before, err := os.ReadFile(path)
+	require.NoError(t, err)
+
+	fb.now = fixedClock("2026-10-31T23:00:00Z")
+	_, err = fb.reserve(1, 100)
+	require.ErrorContains(t, err, "2026-11")
+	require.ErrorContains(t, err, "2026-10")
+	after, err := os.ReadFile(path)
+	require.NoError(t, err)
+	assert.Equal(t, string(before), string(after))
+}
+
+func TestFileBudgetLockFileSymlinkRefused(t *testing.T) {
+	path := stateFile(t)
+	require.NoError(t, ensureAuditLogDirectory(path))
+	target := filepath.Join(t.TempDir(), "elsewhere")
+	require.NoError(t, os.WriteFile(target, nil, 0o600))
+	require.NoError(t, os.Symlink(target, path+".lock"))
+	_, err := newFileBudget(path).reserve(1, 100)
+	require.ErrorContains(t, err, "budget lock file")
 }

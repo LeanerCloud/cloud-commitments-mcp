@@ -16,7 +16,7 @@ import (
 // sibling file, not the state file, because the state file is replaced by
 // rename on every write and a lock on the old inode would guard nothing.
 func lockBudgetFile(path string, timeout time.Duration) (func(), error) {
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0o600) // #nosec G304 G703 -- operator-set path, not tool input
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR|unix.O_NOFOLLOW, 0o600) // #nosec G304 G703 -- operator-set path, not tool input
 	if err != nil {
 		return nil, fmt.Errorf("open budget lock file %s: %w", path, err)
 	}

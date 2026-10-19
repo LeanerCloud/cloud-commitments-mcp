@@ -176,10 +176,11 @@ Understand these before enabling real purchases, especially in a shared or produ
 
 Set `CUDLY_MCP_BUDGET_STATE` to a file path to keep the cumulative budget across restarts and share it between server processes. Unset or blank keeps the in-memory, per-process budget described above.
 
-- **Window:** one calendar month in UTC. The first purchase check in a new month starts again from 0; there is no other automatic reset.
+- **Window:** one calendar month in UTC. The first purchase check in a new month starts `spent_usd` again from 0; there is no other automatic reset. Reservations still unsettled carry into the new month and keep counting until settled or reset. A file dated after the current UTC month (clock skew) refuses purchases and is not rewritten.
 - **File:** JSON, written atomically (temp file, fsync, rename) under an exclusive lock on `<path>.lock`, so concurrent servers cannot overspend together. The parent directory is created `0700` and the files `0600`, as for the audit log. Locking needs Linux or macOS; elsewhere a configured file refuses purchases.
 - **Format:** `{"month": "2026-10", "reservations": [{"id": "...", "usd": 40}], "spent_usd": 60, "version": 1}`. A reservation is written before the purchase call and settled after. One still present (a crash or timeout mid-purchase) counts as spent.
 - **Fail closed:** a missing file is a fresh budget. A file that is corrupt, has an unknown version, or cannot be read or locked within 10 seconds refuses every real purchase, with the refusal recorded in the audit log. It is never overwritten.
+- **Stale temp files:** a crash between creating the temp file and the rename can leave a `<name>.tmp-*` file next to the state file. It is safe to delete.
 - **Reset:** stop every server that uses the file, then delete the file (or edit `spent_usd` and `reservations`) and restart. Do this after confirming whether an unsettled reservation actually bought anything.
 
 ## Audit log

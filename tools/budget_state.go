@@ -58,10 +58,15 @@ func (s budgetState) validate() error {
 	if !validBudgetAmount(s.SpentUSD) {
 		return fmt.Errorf("invalid spent_usd %v", s.SpentUSD)
 	}
+	seen := make(map[string]bool, len(s.Reservations))
 	for _, r := range s.Reservations {
 		if r.ID == "" || !validBudgetAmount(r.USD) {
 			return fmt.Errorf("invalid reservation %+v", r)
 		}
+		if seen[r.ID] {
+			return fmt.Errorf("duplicate reservation id %q", r.ID)
+		}
+		seen[r.ID] = true
 	}
 	return nil
 }
@@ -99,8 +104,15 @@ func (f *fileBudget) update(fn func(*budgetState) (write bool, err error)) error
 		return err
 	}
 	rolled := false
-	if m := f.month(); st.Month != m {
-		st, rolled = budgetState{Version: budgetStateVersion, Month: m}, true
+	// YYYY-MM compares chronologically as a string. A file from a later month
+	// (clock skew or a future-dated file) is never rolled back or rewritten.
+	switch m := f.month(); {
+	case st.Month > m:
+		return fmt.Errorf("budget state file %s is for %s but the current UTC month is %s; refusing instead of resetting (fix the clock or the file)", f.path, st.Month, m)
+	case st.Month < m:
+		// New month: spend restarts at 0, but unsettled reservations may have
+		// bought something, so they keep counting until settled or reset.
+		st, rolled = budgetState{Version: budgetStateVersion, Month: m, Reservations: st.Reservations}, true
 	}
 	write, err := fn(&st)
 	if err != nil {
