@@ -113,7 +113,7 @@ func (f *fileBudget) update(fn func(*budgetState) (write bool, err error)) error
 }
 
 func (f *fileBudget) load() (budgetState, error) {
-	data, err := os.ReadFile(f.path) // #nosec G304 -- operator-set path
+	data, err := os.ReadFile(f.path) // #nosec G304 G703 -- operator-set path, not tool input
 	if errors.Is(err, fs.ErrNotExist) {
 		return budgetState{Version: budgetStateVersion}, nil
 	}
@@ -152,14 +152,14 @@ func (f *fileBudget) save(st budgetState) error {
 	serr := tmp.Sync()
 	cerr := tmp.Close()
 	if err := errors.Join(werr, serr, cerr); err != nil {
-		_ = os.Remove(tmpName)
+		_ = os.Remove(tmpName) // #nosec G703 -- temp file we created in the operator-set directory
 		return fmt.Errorf("write budget state temp file %s: %w", tmpName, err)
 	}
-	if err := os.Rename(tmpName, f.path); err != nil {
-		_ = os.Remove(tmpName)
+	if err := os.Rename(tmpName, f.path); err != nil { // #nosec G703 -- operator-set path, not tool input
+		_ = os.Remove(tmpName) // #nosec G703 -- temp file we created in the operator-set directory
 		return fmt.Errorf("replace budget state file %s: %w", f.path, err)
 	}
-	d, err := os.Open(dir) // #nosec G304 -- parent of the operator-set path
+	d, err := os.Open(dir) // #nosec G304 G703 -- parent of the operator-set path
 	if err != nil {
 		return fmt.Errorf("open budget state directory %s: %w", dir, err)
 	}
@@ -172,8 +172,10 @@ func (f *fileBudget) save(st budgetState) error {
 func (f *fileBudget) reserve(usd, limit float64) (*budgetReservation, error) {
 	id := uuid.NewString()
 	var committed float64
+	exceeded := false
 	err := f.update(func(st *budgetState) (bool, error) {
 		if st.totalUSD()+usd > limit {
+			exceeded = true
 			return false, fmt.Errorf("refusing real purchase: %.2f USD would exceed the cumulative budget %s=%.2f (%.2f USD remaining in %s UTC; state file %s, resets next calendar month)",
 				usd, EnvBudgetUSD, limit, max(0, limit-st.totalUSD()), st.Month, f.path)
 		}
@@ -181,6 +183,9 @@ func (f *fileBudget) reserve(usd, limit float64) (*budgetReservation, error) {
 		committed = st.SpentUSD
 		return true, nil
 	})
+	if err != nil && !exceeded {
+		return nil, fmt.Errorf("refusing real purchase: the persisted budget %s is unusable, so spend cannot be checked: %w", EnvBudgetState, err)
+	}
 	if err != nil {
 		return nil, err
 	}

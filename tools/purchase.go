@@ -631,11 +631,11 @@ func preflightRealPurchase(ctx context.Context, req PurchaseRequest, rec common.
 	if err != nil {
 		return nil, nil, err
 	}
-	reservation, err := processBudget.reserve(usd, limits.budget)
+	reservation, err := reserveBudget(usd, limits.budget)
 	if err != nil {
 		return nil, nil, err
 	}
-	log.Printf("mcp budget: reserved %.2f of %.2f USD (committed %.2f)", usd, limits.budget, processBudget.committedUSD())
+	log.Printf("mcp budget: reserved %.2f of %.2f USD (committed %.2f)", usd, limits.budget, reservation.committed)
 	return client, reservation, nil
 }
 

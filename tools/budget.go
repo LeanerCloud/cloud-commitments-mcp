@@ -2,7 +2,10 @@ package tools
 
 import (
 	"fmt"
+	"os"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/LeanerCloud/cloud-commitments-go/pkg/common"
 )
@@ -17,6 +20,28 @@ type budgetLedger struct {
 }
 
 var processBudget = &budgetLedger{}
+
+// EnvBudgetState names the optional state file that persists the cumulative
+// budget. Set, the budget is per UTC calendar month, survives restarts and is
+// shared by every process using the same path (same directory and permission
+// rules as EnvAuditLog: parents created 0700, file 0600). Unset or blank, the
+// budget stays the in-memory per-process ledger above.
+const EnvBudgetState = "CUDLY_MCP_BUDGET_STATE"
+
+// budgetNow is the clock for the persisted budget's month; tests replace it.
+var budgetNow = time.Now
+
+// reserveBudget holds usd against limit in the persisted budget when
+// EnvBudgetState is set and in the process ledger otherwise.
+func reserveBudget(usd, limit float64) (*budgetReservation, error) {
+	path := strings.TrimSpace(os.Getenv(EnvBudgetState))
+	if path == "" {
+		return processBudget.reserve(usd, limit)
+	}
+	fb := newFileBudget(path)
+	fb.now = budgetNow
+	return fb.reserve(usd, limit)
+}
 
 // budgetReservation holds part of the budget while a purchase is in flight.
 type budgetReservation struct {

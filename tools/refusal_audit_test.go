@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -55,6 +56,13 @@ func refusalCases() []refusalCase {
 			req.ResolveClient = func(context.Context) (provider.ServiceClient, error) {
 				return nil, errors.New("no credentials")
 			}
+		}},
+		{name: "corrupt budget state file", reason: "corrupt", setup: func(t *testing.T, req *PurchaseRequest) {
+			resetBudget(t, "10")
+			path := filepath.Join(t.TempDir(), "budget.json")
+			require.NoError(t, os.WriteFile(path, []byte("{broken"), 0o600))
+			t.Setenv(EnvBudgetState, path)
+			req.ResolveClient = resolveTo(pricedFake(1, common.PurchaseResult{}, nil))
 		}},
 		{name: "cumulative budget", reason: EnvBudgetUSD, setup: func(t *testing.T, req *PurchaseRequest) {
 			resetBudget(t, "10")
