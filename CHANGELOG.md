@@ -50,6 +50,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Bumped the `cloud-commitments-go` pins to 1ce87bd. `computeengine.NewClient` no
+  longer takes a context (go#575); the GCP test call sites follow.
 - Bumped the `cloud-commitments-go` pins to main (9dae64b). `ARCHERA_API_KEY`
   must now be printable ASCII (0x21-0x7E): the client rejects any other byte
   and its error never echoes the key. Library decode errors now show only

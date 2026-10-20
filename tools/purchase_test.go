@@ -78,8 +78,8 @@ type fakeServiceClient struct {
 	purchaseErr    error
 	offeringErr    error
 	offering       *common.OfferingDetails
-	purchaseResult common.PurchaseResult
 	lastOpts       common.PurchaseOptions
+	purchaseResult common.PurchaseResult
 	purchaseCalls  int
 	offeringCalls  int
 }

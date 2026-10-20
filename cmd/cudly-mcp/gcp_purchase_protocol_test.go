@@ -98,7 +98,7 @@ func (p *fakeGCPProvider) GetServiceClient(ctx context.Context, service common.S
 	if service != common.ServiceCompute {
 		return nil, errors.New("fakeGCPProvider: only compute is implemented")
 	}
-	client, err := computeengine.NewClient(ctx, p.cfg.GCPProjectID, region)
+	client, err := computeengine.NewClient(p.cfg.GCPProjectID, region)
 	if err != nil {
 		return nil, err
 	}

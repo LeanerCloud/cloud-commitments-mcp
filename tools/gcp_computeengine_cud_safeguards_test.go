@@ -73,7 +73,7 @@ func (o *fakeGCPCommitmentsOperation) Wait(_ context.Context, _ ...gax.CallOptio
 func TestGCPComputeEnginePurchaseReportsExplicitZeroCost(t *testing.T) {
 	ctx := context.Background()
 
-	client, err := computeengine.NewClient(ctx, "test-project", "us-central1")
+	client, err := computeengine.NewClient("test-project", "us-central1")
 	require.NoError(t, err)
 	fake := &fakeGCPCommitmentsService{}
 	client.SetCommitmentsService(fake)
@@ -122,7 +122,7 @@ func TestGCPComputeEnginePurchaseReportsExplicitZeroCost(t *testing.T) {
 func TestGCPComputeEngineDedupeDefersFamilyWithRecentCUD(t *testing.T) {
 	ctx := context.Background()
 
-	client, err := computeengine.NewClient(ctx, "test-project", "us-central1")
+	client, err := computeengine.NewClient("test-project", "us-central1")
 	require.NoError(t, err)
 
 	// A well-formed recent ACTIVE CUD: non-nil name, a known commitment type

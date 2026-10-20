@@ -340,8 +340,7 @@ func TestDedupeMemoryDBIsFlagOnly(t *testing.T) {
 // GCP is flag-only, and the provider's own family filter must still be
 // reached through the memoizing client.
 func TestDedupeGCPForwardsTheFamilyHookAndOnlyFlags(t *testing.T) {
-	ctx := context.Background()
-	client, err := computeengine.NewClient(ctx, "test-project", "us-central1")
+	client, err := computeengine.NewClient("test-project", "us-central1")
 	require.NoError(t, err)
 	client.SetCommitmentsService(&fakeGCPCommitmentsService{commitments: []*computepb.Commitment{{
 		Name:           proto.String("existing-n2-cud"),
