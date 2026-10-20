@@ -13,18 +13,38 @@ import (
 
 // committedUSD returns the total USD a purchase commits over the full term.
 // Anything it cannot price with confidence is an error, never zero.
-func committedUSD(ctx context.Context, client provider.ServiceClient, rec common.Recommendation) (float64, error) {
+//
+// offeringClass is the EC2 RI offering class the purchase will use. The
+// provider's GetOfferingDetails always prices the convertible offering, so a
+// standard EC2 purchase is priced through classPricer instead, and refused if
+// the client cannot do that (never priced as convertible).
+func committedUSD(ctx context.Context, client provider.ServiceClient, rec common.Recommendation, offeringClass string) (float64, error) {
 	switch {
 	case rec.CommitmentType == common.CommitmentSavingsPlan:
 		return savingsPlanUSD(rec)
 	case rec.Provider == common.ProviderGCP || rec.CommitmentType == common.CommitmentCUD:
 		return 0, errors.New("refusing real purchase: USD totals for GCP committed-use discounts are unavailable at the pinned cloud-commitments-go (go#321), so real GCP CUD purchases are refused")
 	}
-	od, err := client.GetOfferingDetails(ctx, rec)
+	var od *common.OfferingDetails
+	var err error
+	if rec.Service == common.ServiceEC2 && offeringClass == string(OfferingClassStandard) {
+		pricer, ok := client.(classPricer)
+		if !ok {
+			return 0, errors.New("refusing real purchase: cannot determine USD total: the EC2 client cannot price a standard offering class (GetOfferingDetailsForClass missing, cloud-commitments-go#574), so a standard purchase is refused rather than priced as convertible")
+		}
+		od, err = pricer.GetOfferingDetailsForClass(ctx, rec, offeringClass)
+	} else {
+		od, err = client.GetOfferingDetails(ctx, rec)
+	}
 	if err != nil {
 		return 0, fmt.Errorf("refusing real purchase: cannot determine USD total: %w", err)
 	}
 	return unitOfferingUSD(od, rec.Count)
+}
+
+// classPricer is implemented by (*ec2.Client) since cloud-commitments-go#574.
+type classPricer interface {
+	GetOfferingDetailsForClass(ctx context.Context, rec common.Recommendation, offeringClass string) (*common.OfferingDetails, error)
 }
 
 // savingsPlanUSD is hourly commitment x hours x years, from the typed details
@@ -71,11 +91,11 @@ func finiteUSD(total float64) (float64, error) {
 
 // enforceUSDCap refuses a purchase whose total exceeds limit (equal is
 // allowed) and returns the total otherwise.
-func enforceUSDCap(ctx context.Context, client provider.ServiceClient, rec common.Recommendation, limit float64) (float64, error) {
+func enforceUSDCap(ctx context.Context, client provider.ServiceClient, rec common.Recommendation, offeringClass string, limit float64) (float64, error) {
 	if math.IsNaN(limit) || math.IsInf(limit, 0) || limit <= 0 {
 		return 0, fmt.Errorf("refusing real purchase: %s limit %v must be a finite number above 0", EnvMaxCommitmentUSD, limit)
 	}
-	total, err := committedUSD(ctx, client, rec)
+	total, err := committedUSD(ctx, client, rec, offeringClass)
 	if err != nil {
 		return 0, err
 	}

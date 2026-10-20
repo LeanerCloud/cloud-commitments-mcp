@@ -44,7 +44,7 @@ func TestCommittedUSDPerProvider(t *testing.T) {
 		t.Run("aws-"+string(svc), func(t *testing.T) {
 			c := &offeringClient{od: usdOffering(1234.5)}
 			rec := common.Recommendation{Provider: common.ProviderAWS, Service: svc, CommitmentType: common.CommitmentReservedInstance, Count: 3}
-			got, err := committedUSD(context.Background(), c, rec)
+			got, err := committedUSD(context.Background(), c, rec, "")
 			require.NoError(t, err)
 			assert.InDelta(t, 3703.5, got, 1e-9)
 			assert.Equal(t, 1, c.calls)
@@ -53,7 +53,7 @@ func TestCommittedUSDPerProvider(t *testing.T) {
 	t.Run("azure-compute", func(t *testing.T) {
 		c := &offeringClient{od: usdOffering(500)}
 		rec := common.Recommendation{Provider: common.ProviderAzure, Service: common.ServiceCompute, CommitmentType: common.CommitmentReservedInstance, Count: 4}
-		got, err := committedUSD(context.Background(), c, rec)
+		got, err := committedUSD(context.Background(), c, rec, "")
 		require.NoError(t, err)
 		assert.InDelta(t, 2000, got, 1e-9)
 	})
@@ -63,7 +63,7 @@ func TestCommittedUSDPerProvider(t *testing.T) {
 	}{{"1yr", 1}, {"3yr", 3}} {
 		t.Run("savings-plan-"+tc.term, func(t *testing.T) {
 			c := &offeringClient{}
-			got, err := committedUSD(context.Background(), c, usdSPRec(tc.term, &common.SavingsPlanDetails{HourlyCommitment: 2.5}))
+			got, err := committedUSD(context.Background(), c, usdSPRec(tc.term, &common.SavingsPlanDetails{HourlyCommitment: 2.5}), "")
 			require.NoError(t, err)
 			assert.InDelta(t, 2.5*8760*tc.years, got, 1e-9)
 			assert.Zero(t, c.calls)
@@ -105,7 +105,7 @@ func TestCommittedUSDFailsClosed(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			c := &offeringClient{od: tc.od, err: tc.err}
-			got, err := committedUSD(context.Background(), c, tc.rec)
+			got, err := committedUSD(context.Background(), c, tc.rec, "")
 			require.Error(t, err)
 			assert.Zero(t, got)
 			assert.Equal(t, tc.wantCalls, c.calls)
@@ -114,19 +114,19 @@ func TestCommittedUSDFailsClosed(t *testing.T) {
 
 	t.Run("padded lowercase usd accepted", func(t *testing.T) {
 		c := &offeringClient{od: &common.OfferingDetails{TotalCost: 10, Currency: " usd "}}
-		got, err := committedUSD(context.Background(), c, aws)
+		got, err := committedUSD(context.Background(), c, aws, "")
 		require.NoError(t, err)
 		assert.InDelta(t, 20, got, 1e-9)
 	})
 	t.Run("lowercase usd accepted", func(t *testing.T) {
 		c := &offeringClient{od: &common.OfferingDetails{TotalCost: 10, Currency: "usd"}}
-		got, err := committedUSD(context.Background(), c, aws)
+		got, err := committedUSD(context.Background(), c, aws, "")
 		require.NoError(t, err)
 		assert.InDelta(t, 20, got, 1e-9)
 	})
 	t.Run("offering error is wrapped", func(t *testing.T) {
 		cause := errors.New("boom")
-		_, err := committedUSD(context.Background(), &offeringClient{err: cause}, aws)
+		_, err := committedUSD(context.Background(), &offeringClient{err: cause}, aws, "")
 		require.ErrorIs(t, err, cause)
 		assert.Contains(t, err.Error(), "cannot determine USD total")
 	})
@@ -136,17 +136,17 @@ func TestUSDCapBoundary(t *testing.T) {
 	rec := common.Recommendation{Provider: common.ProviderAWS, Service: common.ServiceEC2, Count: 2}
 	c := &offeringClient{od: usdOffering(500)}
 
-	got, err := enforceUSDCap(context.Background(), c, rec, 1000)
+	got, err := enforceUSDCap(context.Background(), c, rec, "", 1000)
 	require.NoError(t, err)
 	assert.InDelta(t, 1000, got, 1e-9)
 
-	_, err = enforceUSDCap(context.Background(), c, rec, 999.99)
+	_, err = enforceUSDCap(context.Background(), c, rec, "", 999.99)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "CUDLY_MCP_MAX_COMMITMENT_USD")
 	assert.Contains(t, err.Error(), "1000.00")
 	assert.Contains(t, err.Error(), "999.99")
 
-	_, err = enforceUSDCap(context.Background(), &offeringClient{err: errors.New("x")}, rec, 1e12)
+	_, err = enforceUSDCap(context.Background(), &offeringClient{err: errors.New("x")}, rec, "", 1e12)
 	require.Error(t, err)
 }
 
@@ -154,7 +154,7 @@ func TestUSDCapInvalidLimit(t *testing.T) {
 	rec := common.Recommendation{Provider: common.ProviderAWS, Service: common.ServiceEC2, Count: 1}
 	for _, limit := range []float64{math.NaN(), math.Inf(1), 0, -1} {
 		c := &offeringClient{od: usdOffering(1)}
-		_, err := enforceUSDCap(context.Background(), c, rec, limit)
+		_, err := enforceUSDCap(context.Background(), c, rec, "", limit)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "CUDLY_MCP_MAX_COMMITMENT_USD")
 		assert.Zero(t, c.calls)

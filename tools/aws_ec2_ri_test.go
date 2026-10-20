@@ -327,7 +327,7 @@ func TestAWSEC2RIPurchaseOfferingClassPassThrough(t *testing.T) {
 	} {
 		t.Run("real_"+tc.want+"_from_"+tc.in, func(t *testing.T) {
 			t.Parallel()
-			fake := &fakeServiceClient{purchaseResult: common.PurchaseResult{Success: true, CommitmentID: "ri-abc"}}
+			fake := newClassPricedClient()
 			var gotService common.ServiceType
 			var gotRegion string
 			tool := &awsEC2RIPurchaseTool{
@@ -419,7 +419,7 @@ func TestAWSEC2RIPurchaseRejectsWrongCaseOfferingClass(t *testing.T) {
 func TestAWSEC2RIPurchaseAuditRecordCarriesOfferingClass(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "audit.jsonl")
 	t.Setenv(EnvAuditLog, path)
-	fake := &fakeServiceClient{purchaseResult: common.PurchaseResult{Success: true, CommitmentID: "ri-abc"}}
+	fake := newClassPricedClient()
 	var gotService common.ServiceType
 	var gotRegion string
 	tool := &awsEC2RIPurchaseTool{

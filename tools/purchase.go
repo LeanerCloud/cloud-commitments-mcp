@@ -362,7 +362,7 @@ func preflightRealPurchase(ctx context.Context, req PurchaseRequest, rec common.
 	if err != nil {
 		return nil, nil, fmt.Errorf("resolve %s service client: %w", rec.Provider, err)
 	}
-	usd, err := enforceUSDCap(ctx, client, rec, limits.usd)
+	usd, err := enforceUSDCap(ctx, client, rec, req.OfferingClass, limits.usd)
 	if err != nil {
 		return nil, nil, err
 	}

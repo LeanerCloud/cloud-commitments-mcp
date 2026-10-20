@@ -97,6 +97,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed
 
+- `cudly_aws_ec2_ri_purchase` with `offering_class=standard` is now capped by
+  `CUDLY_MCP_MAX_COMMITMENT_USD` and counted against `CUDLY_MCP_BUDGET_USD` at
+  the standard offering's price (`GetOfferingDetailsForClass`, go#574), not the
+  convertible one. A client that cannot price a class refuses a standard
+  purchase instead of falling back to convertible pricing.
 - The MCPB bundle no longer blocks sub-unit spend caps (for example 0.5 USD/h):
   the hourly-commitment and memory caps now declare `min` 0, and the server
   still rejects values `<= 0`.
