@@ -111,7 +111,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 ### Fixed
 
 - The Claude Desktop settings for `budget_usd` and `max_commitment_usd` now
-  accept down to 0.01 USD instead of 1, matching the server, which accepts any
+  use the inclusive min 0 (like the other float caps) instead of 1, so sub-dollar amounts are accepted, matching the server, which accepts any
   positive amount (mcp#82). Tests also pin that a panic or a cancelled context
   inside the provider purchase call keeps the budget reservation counted.
 - `cudly_aws_ec2_ri_purchase` with `offering_class=standard` is now capped by

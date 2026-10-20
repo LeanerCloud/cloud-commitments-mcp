@@ -42,11 +42,10 @@ func TestManifestMinMatchesServerCapBounds(t *testing.T) {
 		return err == nil
 	}
 
-	// The USD totals (capUSD, capBudget) are tracked by mcp#82.
 	caps := []struct {
 		c     capSetting
 		isInt bool
-	}{{capCount, true}, {capHourly, false}, {capMemory, false}}
+	}{{capCount, true}, {capHourly, false}, {capMemory, false}, {capUSD, false}, {capBudget, false}}
 	for _, tc := range caps {
 		t.Run(tc.c.env, func(t *testing.T) {
 			sub := ref.FindStringSubmatch(m.Server.MCPConfig.Env[tc.c.env])
