@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"encoding/json"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -288,25 +289,6 @@ func (r *recordingProvider) GetServiceClient(_ context.Context, service common.S
 	return r.client, nil
 }
 
-func TestEC2OfferingClassSchemaEnumAndDefault(t *testing.T) {
-	t.Parallel()
-	schema, err := BuildInputSchema[ec2RIPurchaseArgs](map[string]FieldOverride{
-		"offering_class": {Enum: []any{string(OfferingClassStandard), string(OfferingClassConvertible)}, Default: string(OfferingClassConvertible)},
-	})
-	require.NoError(t, err)
-	raw, err := json.Marshal(schema)
-	require.NoError(t, err)
-	var got map[string]any
-	require.NoError(t, json.Unmarshal(raw, &got))
-	oc, ok := got["properties"].(map[string]any)["offering_class"].(map[string]any)
-	require.True(t, ok, "offering_class must be in the tool schema")
-	assert.ElementsMatch(t, []any{"standard", "convertible"}, oc["enum"])
-	assert.Equal(t, "convertible", oc["default"])
-	if req, ok := got["required"].([]any); ok {
-		assert.NotContains(t, req, "offering_class")
-	}
-}
-
 func TestAWSEC2RIPurchaseRegisteredSchemaHasOfferingClass(t *testing.T) {
 	t.Parallel()
 	srv := mcp.NewServer(&mcp.Implementation{Name: "t", Version: "0"}, nil)
@@ -324,8 +306,16 @@ func TestAWSEC2RIPurchaseRegisteredSchemaHasOfferingClass(t *testing.T) {
 	require.Len(t, list.Tools, 1)
 	raw, err := json.Marshal(list.Tools[0].InputSchema)
 	require.NoError(t, err)
-	assert.Contains(t, string(raw), `"offering_class"`)
-	assert.Contains(t, string(raw), `"standard"`)
+	var schema map[string]any
+	require.NoError(t, json.Unmarshal(raw, &schema))
+	oc, ok := schema["properties"].(map[string]any)["offering_class"].(map[string]any)
+	require.True(t, ok, "offering_class must be in the registered tool schema")
+	assert.ElementsMatch(t, []any{"standard", "convertible"}, oc["enum"])
+	assert.Equal(t, "convertible", oc["default"])
+	if req, ok := schema["required"].([]any); ok {
+		assert.NotContains(t, req, "offering_class")
+	}
+	assert.Contains(t, list.Tools[0].Description, "offering_class")
 }
 
 func TestAWSEC2RIPurchaseOfferingClassPassThrough(t *testing.T) {
@@ -389,4 +379,66 @@ func TestIdempotencyKeyFoldsInOfferingClass(t *testing.T) {
 	rec, region, _, _, err := ec2RecommendationFromArgs(validEC2Args())
 	require.NoError(t, err)
 	assert.NotEqual(t, idempotencyKeyFor(region, rec, "", "", "standard"), idempotencyKeyFor(region, rec, "", "", "convertible"))
+}
+
+// TestIdempotencyKeyGoldenCompatibility pins the exact key strings main
+// derived before offering_class existed. The EC2 client dedupes only by this
+// token, so a retry spanning an upgrade must derive the same one.
+func TestIdempotencyKeyGoldenCompatibility(t *testing.T) {
+	t.Parallel()
+	rec, region, _, _, err := ec2RecommendationFromArgs(validEC2Args())
+	require.NoError(t, err)
+	const base = "mcp:aws:s:us-east-1:ec2:m5.large:3:3yr:no-upfront:instance_type=m5.large;platform=Linux/UNIX;tenancy=default;scope=region;vcpu=0;memory_gb=0:"
+	assert.Equal(t, base, idempotencyKeyFor(region, rec, "s", "", ""))
+	assert.Equal(t, base, idempotencyKeyFor(region, rec, "s", "", "convertible"))
+	assert.Equal(t, "mcp:aws:s:us-east-1:ec2:m5.large:3:3yr:no-upfront:instance_type=m5.large;platform=Linux/UNIX;tenancy=default;scope=region;vcpu=0;memory_gb=0;offering_class=standard:",
+		idempotencyKeyFor(region, rec, "s", "", "standard"))
+	assert.Equal(t, base+"n1", idempotencyKeyFor(region, rec, "s", "n1", "convertible"))
+
+	nonEC2 := testRecommendation()
+	nonEC2.Service = common.ServiceRDS
+	assert.Equal(t, "mcp:aws:s:us-east-1:rds:m5.large:3:3yr:no-upfront::", idempotencyKeyFor("us-east-1", nonEC2, "s", "", ""))
+}
+
+func TestAWSEC2RIPurchaseRejectsWrongCaseOfferingClass(t *testing.T) {
+	t.Parallel()
+	tool := &awsEC2RIPurchaseTool{createProvider: func(string, *provider.ProviderConfig) (provider.Provider, error) {
+		t.Fatal("wrong-case offering_class must be rejected before any provider call")
+		return nil, nil
+	}}
+	args := validEC2Args()
+	args.OfferingClass = "Standard"
+	args.DryRun = boolPtr(false)
+	args.Confirm = boolPtr(true)
+	_, _, err := tool.handle(context.Background(), nil, args)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "offering_class")
+}
+
+// Not parallel: t.Setenv sets the audit log path.
+func TestAWSEC2RIPurchaseAuditRecordCarriesOfferingClass(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "audit.jsonl")
+	t.Setenv(EnvAuditLog, path)
+	fake := &fakeServiceClient{purchaseResult: common.PurchaseResult{Success: true, CommitmentID: "ri-abc"}}
+	var gotService common.ServiceType
+	var gotRegion string
+	tool := &awsEC2RIPurchaseTool{
+		createProvider: func(_ string, _ *provider.ProviderConfig) (provider.Provider, error) {
+			return &recordingProvider{fakeProvider: &fakeProvider{name: "aws"}, client: fake, gotService: &gotService, gotRegion: &gotRegion}, nil
+		},
+	}
+	args := validEC2Args()
+	args.OfferingClass = "standard"
+	args.DryRun = boolPtr(false)
+	args.Confirm = boolPtr(true)
+	_, _, err := tool.handle(context.Background(), nil, args)
+	require.NoError(t, err)
+
+	lines := readAuditLines(t, path)
+	require.Len(t, lines, 1)
+	var rec struct {
+		Raw map[string]string `json:"raw_recommendation"`
+	}
+	require.NoError(t, json.Unmarshal([]byte(lines[0]), &rec))
+	assert.Equal(t, "standard", rec.Raw["offering_class"])
 }

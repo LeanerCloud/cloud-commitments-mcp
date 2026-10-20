@@ -7,6 +7,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- `cudly_aws_ec2_ri_purchase` takes an optional `offering_class` (`standard` or
+  `convertible`, default `convertible`). It is echoed in the response and
+  recorded in the audit log (`raw_recommendation`).
 - `CUDLY_MCP_BUDGET_STATE`: optional state file that persists the cumulative
   purchase budget per UTC calendar month, survives restarts and is shared by
   processes using the same path (flock, atomic writes). A corrupt or unreadable

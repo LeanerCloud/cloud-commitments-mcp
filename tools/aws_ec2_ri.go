@@ -21,7 +21,9 @@ var awsEC2RIPurchaseAnnotations = purchaseAnnotations(awsEC2RIPurchaseTitle)
 const awsEC2RIPurchaseDescription = "Purchase AWS EC2 Reserved Instances. THIS SPENDS REAL MONEY when " +
 	"dry_run=false and confirm=true. Always call with dry_run=true first (the default) to validate your " +
 	"parameters before committing; a dry_run response never contacts AWS and never spends money. Search first " +
-	"with cudly_search_recommendations to find a region/instance_type/count worth reserving."
+	"with cudly_search_recommendations to find a region/instance_type/count worth reserving. offering_class " +
+	"(standard or convertible, default convertible) sets the RI type: standard is typically cheaper but " +
+	"cannot be exchanged; it is echoed in the preview, so check it before buying."
 
 // ec2RIPurchaseArgs is the input schema for cudly_aws_ec2_ri_purchase. term
 // and payment_option map onto common.Recommendation.Term/PaymentOption;
