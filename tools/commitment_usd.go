@@ -9,6 +9,7 @@ import (
 
 	"github.com/LeanerCloud/cloud-commitments-go/pkg/common"
 	"github.com/LeanerCloud/cloud-commitments-go/pkg/provider"
+	"github.com/LeanerCloud/cloud-commitments-go/providers/aws/services/ec2"
 )
 
 // committedUSD returns the total USD a purchase commits over the full term.
@@ -46,6 +47,8 @@ func committedUSD(ctx context.Context, client provider.ServiceClient, rec common
 type classPricer interface {
 	GetOfferingDetailsForClass(ctx context.Context, rec common.Recommendation, offeringClass string) (*common.OfferingDetails, error)
 }
+
+var _ classPricer = (*ec2.Client)(nil)
 
 // savingsPlanUSD is hourly commitment x hours x years, from the typed details
 // that the purchase itself uses (never the caller-visible CommitmentCost).

@@ -107,3 +107,20 @@ func TestStandardClassOnNonEC2StaysOnGenericPricing(t *testing.T) {
 	assert.InDelta(t, convertibleUnitUSD, got, 1e-9)
 	assert.Empty(t, c.classCalls)
 }
+
+func TestRedshiftRealPurchaseRefusedBeforeBudget(t *testing.T) {
+	resetBudget(t, "1000")
+	c := newClassPricedClient()
+	rec := testRecommendation()
+	rec.Service = common.ServiceRedshift
+	rec.Count = 1
+
+	_, err := ExecutePurchase(context.Background(), PurchaseRequest{
+		Region: rec.Region, Recommendation: rec, Confirm: true, CredentialScope: "scope",
+		ResolveClient: func(context.Context) (provider.ServiceClient, error) { return c, nil },
+	})
+	require.ErrorContains(t, err, "RequestedAt")
+	assert.Zero(t, c.purchaseCalls)
+	assert.Zero(t, c.offeringCalls)
+	assert.Zero(t, processBudget.committedUSD())
+}

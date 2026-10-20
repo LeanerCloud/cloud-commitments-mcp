@@ -51,7 +51,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 ### Changed
 
 - Bumped the `cloud-commitments-go` pins to 1ce87bd. `computeengine.NewClient` no
-  longer takes a context (go#575); the GCP test call sites follow.
+  longer takes a context (go#575); the GCP test call sites follow. Behavior
+  pulled in: Savings Plans in aws-cn are refused before any AWS call (go#566);
+  Azure Savings Plans refuse a malformed idempotency token before the purchase
+  PUT (e735fdb, go#495); Redshift purchases are deduped by DescribeReservedNodes
+  and require `RequestedAt` (go#515, see Breaking); remaining AWS and MemoryDB
+  pagination loops are capped (go#573); RDS reservations count against other
+  sizes of the same family in dedupe (go#564).
 - Bumped the `cloud-commitments-go` pins to main (9dae64b). `ARCHERA_API_KEY`
   must now be printable ASCII (0x21-0x7E): the client rejects any other byte
   and its error never echoes the key. Library decode errors now show only
@@ -73,6 +79,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Breaking
 
+- **Real Redshift purchases are refused.** cloud-commitments-go#515 needs the
+  first-attempt time of the idempotency key (`PurchaseOptions.RequestedAt`) and
+  the MCP keeps no durable per-key state to supply it. Refused before the
+  budget is reserved, until that time is tracked.
 - **`CUDLY_MCP_BUDGET_USD` is now required for every real purchase.**
   Unset, empty or invalid refuses the purchase before credentials are
   resolved. The MCPB bundle has a matching setting that must be filled in.
