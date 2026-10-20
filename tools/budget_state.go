@@ -147,17 +147,22 @@ func (f *fileBudget) load() (budgetState, error) {
 	return st, nil
 }
 
-// save replaces the file atomically: temp file in the same directory, fsync,
-// rename, then fsync of the directory so the rename survives a crash.
 func (f *fileBudget) save(st budgetState) error {
-	data, err := json.MarshalIndent(st, "", "  ")
+	return writeStateAtomically(f.path, st, "budget state")
+}
+
+// writeStateAtomically replaces path with the JSON of v: temp file in the same
+// directory, fsync, rename, then fsync of the directory so the rename survives
+// a crash. what names the file kind in errors.
+func writeStateAtomically(path string, v any, what string) error {
+	data, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
-		return fmt.Errorf("encode budget state: %w", err)
+		return fmt.Errorf("encode %s: %w", what, err)
 	}
-	dir := filepath.Dir(f.path)
-	tmp, err := os.CreateTemp(dir, filepath.Base(f.path)+".tmp-*")
+	dir := filepath.Dir(path)
+	tmp, err := os.CreateTemp(dir, filepath.Base(path)+".tmp-*")
 	if err != nil {
-		return fmt.Errorf("create budget state temp file in %s: %w", dir, err)
+		return fmt.Errorf("create %s temp file in %s: %w", what, dir, err)
 	}
 	tmpName := tmp.Name()
 	_, werr := tmp.Write(append(data, '\n'))
@@ -165,15 +170,15 @@ func (f *fileBudget) save(st budgetState) error {
 	cerr := tmp.Close()
 	if jerr := errors.Join(werr, serr, cerr); jerr != nil {
 		_ = os.Remove(tmpName) // #nosec G703 -- temp file we created in the operator-set directory
-		return fmt.Errorf("write budget state temp file %s: %w", tmpName, jerr)
+		return fmt.Errorf("write %s temp file %s: %w", what, tmpName, jerr)
 	}
-	if rerr := os.Rename(tmpName, f.path); rerr != nil { // #nosec G703 -- operator-set path, not tool input
+	if rerr := os.Rename(tmpName, path); rerr != nil { // #nosec G703 -- operator-set path, not tool input
 		_ = os.Remove(tmpName) // #nosec G703 -- temp file we created in the operator-set directory
-		return fmt.Errorf("replace budget state file %s: %w", f.path, rerr)
+		return fmt.Errorf("replace %s file %s: %w", what, path, rerr)
 	}
 	d, err := os.Open(dir) // #nosec G304 G703 -- parent of the operator-set path
 	if err != nil {
-		return fmt.Errorf("open budget state directory %s: %w", dir, err)
+		return fmt.Errorf("open %s directory %s: %w", what, dir, err)
 	}
 	return errors.Join(d.Sync(), d.Close())
 }

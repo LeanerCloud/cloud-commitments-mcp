@@ -324,9 +324,6 @@ func authorizeRealPurchase(req PurchaseRequest, rec common.Recommendation) (purc
 		return purchaseLimits{}, fmt.Errorf("real purchases are disabled: set %s=1 to allow the MCP server to execute real purchases",
 			EnvEnableRealPurchases)
 	}
-	if rec.Service == common.ServiceRedshift {
-		return purchaseLimits{}, errRedshiftRequestedAt
-	}
 	// Operator spend ceiling, per call. See enforceSpendCaps.
 	if err := enforceSpendCaps(rec); err != nil {
 		return purchaseLimits{}, err
@@ -351,16 +348,6 @@ func authorizeRealPurchase(req PurchaseRequest, rec common.Recommendation) (purc
 	}
 	return purchaseLimits{usd: usdLimit, budget: budget}, nil
 }
-
-// errRedshiftRequestedAt: cloud-commitments-go#515 finds an earlier Redshift
-// purchase by start time and refuses a tokenized purchase without
-// PurchaseOptions.RequestedAt. That must be the first-dispatch time of the
-// idempotency key, stable across retries and restarts. The MCP keeps no durable
-// per-key state (the budget file is keyed by reservation, the audit log is
-// write-only and optional), and the call time would let a later retry miss the
-// first purchase and double-buy. So Redshift is refused up front, before the
-// budget is touched, instead of failing in the library after reserving it.
-var errRedshiftRequestedAt = errors.New("refusing real purchase: Redshift purchases are unsupported until the MCP tracks the first-attempt time of an idempotency key (cloud-commitments-go#515 requires PurchaseOptions.RequestedAt)")
 
 // preflightRealPurchase runs every gate that can refuse a real purchase
 // before PurchaseCommitment is called: authorizeRealPurchase, client
@@ -436,10 +423,17 @@ func ExecutePurchase(ctx context.Context, req PurchaseRequest) (*PurchaseRespons
 	}
 
 	token := common.DeriveIdempotencyToken(idempotencyKeyFor(req.Region, rec, req.CredentialScope, req.Nonce, req.OfferingClass), 0)
+	requestedAt, err := firstAttemptTime(token, rec.Service)
+	if err != nil {
+		reservation.settle(false)
+		recordPurchaseRefusal(req, rec, err)
+		return nil, err
+	}
 	opts := common.PurchaseOptions{
 		Source:           common.PurchaseSourceMCP,
 		IdempotencyToken: token,
 		OfferingClass:    req.OfferingClass,
+		RequestedAt:      requestedAt,
 	}
 
 	return purchaseAndSettle(ctx, req, client, opts, reservation)

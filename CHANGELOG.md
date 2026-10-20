@@ -7,6 +7,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Every real purchase passes `PurchaseOptions.RequestedAt`, the first-dispatch
+  time of its idempotency key, recorded before the provider call and reused on
+  retries (go#515: Redshift finds an earlier purchase by start time). With
+  `CUDLY_MCP_BUDGET_STATE` set it is persisted in `<state>.attempts` (30-day
+  retention; a corrupt or unwritable file refuses the purchase). Without it the
+  time is per process, and Redshift purchases are refused because their dedupe
+  must survive a restart.
 - `cudly_aws_ec2_ri_purchase` takes an optional `offering_class` (`standard` or
   `convertible`, default `convertible`). It is echoed in the response and
   recorded in the audit log (`raw_recommendation`).
@@ -55,7 +62,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
   pulled in: Savings Plans in aws-cn are refused before any AWS call (go#566);
   Azure Savings Plans refuse a malformed idempotency token before the purchase
   PUT (e735fdb, go#495); Redshift purchases are deduped by DescribeReservedNodes
-  and require `RequestedAt` (go#515, see Breaking); remaining AWS and MemoryDB
+  and require `RequestedAt` (go#515, see Added); remaining AWS and MemoryDB
   pagination loops are capped (go#573); RDS reservations count against other
   sizes of the same family in dedupe (go#564).
 - Bumped the `cloud-commitments-go` pins to main (9dae64b). `ARCHERA_API_KEY`
@@ -79,10 +86,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Breaking
 
-- **Real Redshift purchases are refused.** cloud-commitments-go#515 needs the
-  first-attempt time of the idempotency key (`PurchaseOptions.RequestedAt`) and
-  the MCP keeps no durable per-key state to supply it. Refused before the
-  budget is reserved, until that time is tracked.
 - **`CUDLY_MCP_BUDGET_USD` is now required for every real purchase.**
   Unset, empty or invalid refuses the purchase before credentials are
   resolved. The MCPB bundle has a matching setting that must be filled in.
