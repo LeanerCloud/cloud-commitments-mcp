@@ -14,7 +14,7 @@ credentials; `snyk-scan` reads the `SNYK_TOKEN` secret.
 
 Jobs: `lint` (golangci-lint, `go vet`, cyclomatic complexity), `workflow-lint` (actionlint,
 zizmor), `unit-tests` (coverage check, warns under 80%), `mcp-build` (builds
-`bin/cudly-mcp` on an OS matrix), `integration-tests`, `security-scan` (govulncheck, gosec,
+`bin/cudly-mcp` on an OS matrix), `integration-tests`, `security-scan` (gitleaks, govulncheck, gosec,
 Trivy) and `snyk-scan`.
 
 The `ci-success` job aggregates `lint`, `workflow-lint`, `unit-tests`, `integration-tests`,
