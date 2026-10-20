@@ -217,6 +217,7 @@ func TestMainAuditLockTimeout(t *testing.T) {
 }
 
 func TestMainRejectsStdoutAuditLogBeforeProtocolTraffic(t *testing.T) {
+	t.Parallel()
 	info, err := os.Stat("/dev/stdout")
 	if err != nil {
 		t.Skipf("/dev/stdout unavailable: %v", err)

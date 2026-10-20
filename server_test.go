@@ -405,6 +405,7 @@ func TestSearchRecommendationsSchemaAdvertisesTermAndPaymentEnums(t *testing.T) 
 // #95: an explicit `"arguments": null` on a tool with schema defaults used to
 // panic in the SDK's handler goroutine and kill the server process.
 func TestToolCallArgumentsNullOrAbsentApplyDefaults(t *testing.T) {
+	t.Parallel()
 	cases := map[string]any{
 		"null":    json.RawMessage("null"),
 		"omitted": nil,
@@ -437,6 +438,7 @@ func TestToolCallArgumentsNullOrAbsentApplyDefaults(t *testing.T) {
 }
 
 func TestNullArgumentsAsEmptyObjectMiddleware(t *testing.T) {
+	t.Parallel()
 	var got gosdk.Request
 	called := 0
 	next := func(_ context.Context, _ string, req gosdk.Request) (gosdk.Result, error) {
