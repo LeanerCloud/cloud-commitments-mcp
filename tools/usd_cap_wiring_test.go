@@ -73,6 +73,7 @@ func TestUSDCapEnvParsing(t *testing.T) {
 }
 
 func TestUSDCapRefusesRealGCPCUDPurchase(t *testing.T) {
+	t.Parallel()
 	rec, _, _, _, err := gcpComputeEngineRecommendationFromArgs(validGCPCUDArgs())
 	require.NoError(t, err)
 	fake := &fakeServiceClient{}

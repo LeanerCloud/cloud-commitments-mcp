@@ -14,6 +14,7 @@ import (
 const budgetLockSupported = false
 
 func TestBudgetLockUnsupportedPlatformFailsClosed(t *testing.T) {
+	t.Parallel()
 	_, err := lockBudgetFile(filepath.Join(t.TempDir(), "b.lock"), time.Second)
 	require.ErrorContains(t, err, "not supported")
 }

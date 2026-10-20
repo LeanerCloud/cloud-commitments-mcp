@@ -43,6 +43,7 @@ func readState(t *testing.T, path string) budgetState {
 
 // TestBudgetHelperProcess is the child of TestFileBudgetTwoProcessesShareLimit,
 // not a test: it runs only when budgetHelperEnv carries "path|attempts".
+// sequential: subprocess entry point driven by an env var, never a parallel test.
 func TestBudgetHelperProcess(t *testing.T) {
 	arg := os.Getenv(budgetHelperEnv)
 	if arg == "" {
@@ -65,6 +66,7 @@ func TestBudgetHelperProcess(t *testing.T) {
 }
 
 func TestFileBudgetTwoProcessesShareLimit(t *testing.T) {
+	t.Parallel()
 	path := stateFile(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
@@ -106,6 +108,7 @@ func TestFileBudgetTwoProcessesShareLimit(t *testing.T) {
 }
 
 func TestFileBudgetRestartDoesNotRefill(t *testing.T) {
+	t.Parallel()
 	path := stateFile(t)
 	first := newFileBudget(path)
 	r, err := first.reserve(60, 100)
@@ -120,6 +123,7 @@ func TestFileBudgetRestartDoesNotRefill(t *testing.T) {
 }
 
 func TestFileBudgetUnsettledReservationCountsAsSpent(t *testing.T) {
+	t.Parallel()
 	path := stateFile(t)
 	_, err := newFileBudget(path).reserve(70, 100) // process "crashed" before settle
 	require.NoError(t, err)
@@ -130,6 +134,7 @@ func TestFileBudgetUnsettledReservationCountsAsSpent(t *testing.T) {
 }
 
 func TestFileBudgetCleanNoopReleases(t *testing.T) {
+	t.Parallel()
 	path := stateFile(t)
 	fb := newFileBudget(path)
 	r, err := fb.reserve(70, 100)
@@ -141,6 +146,7 @@ func TestFileBudgetCleanNoopReleases(t *testing.T) {
 }
 
 func TestFileBudgetMonthRollover(t *testing.T) {
+	t.Parallel()
 	path := stateFile(t)
 	fb := newFileBudget(path)
 	fb.now = fixedClock("2026-10-31T23:59:59Z")
@@ -160,6 +166,7 @@ func TestFileBudgetMonthRollover(t *testing.T) {
 }
 
 func TestFileBudgetMonthIsUTC(t *testing.T) {
+	t.Parallel()
 	fb := newFileBudget(stateFile(t))
 	zone := time.FixedZone("UTC+14", 14*3600)
 	local := time.Date(2026, 11, 1, 5, 0, 0, 0, zone) // still 2026-10-31 in UTC
@@ -168,6 +175,7 @@ func TestFileBudgetMonthIsUTC(t *testing.T) {
 }
 
 func TestFileBudgetSettleAfterRolloverCountsInNewMonth(t *testing.T) {
+	t.Parallel()
 	path := stateFile(t)
 	fb := newFileBudget(path)
 	fb.now = fixedClock("2026-10-31T23:59:59Z")
@@ -182,6 +190,7 @@ func TestFileBudgetSettleAfterRolloverCountsInNewMonth(t *testing.T) {
 }
 
 func TestFileBudgetCorruptFileRefuses(t *testing.T) {
+	t.Parallel()
 	for name, content := range map[string]string{
 		"garbage":         "not json",
 		"empty":           "",
@@ -207,6 +216,7 @@ func TestFileBudgetCorruptFileRefuses(t *testing.T) {
 }
 
 func TestFileBudgetUnreadableFileRefuses(t *testing.T) {
+	t.Parallel()
 	path := stateFile(t)
 	require.NoError(t, ensureAuditLogDirectory(path))
 	require.NoError(t, os.Mkdir(path, 0o700)) // a directory where the file should be
@@ -215,6 +225,7 @@ func TestFileBudgetUnreadableFileRefuses(t *testing.T) {
 }
 
 func TestFileBudgetPermissions(t *testing.T) {
+	t.Parallel()
 	path := stateFile(t)
 	r, err := newFileBudget(path).reserve(1, 100)
 	require.NoError(t, err)
@@ -231,6 +242,7 @@ func TestFileBudgetPermissions(t *testing.T) {
 }
 
 func TestFileBudgetRolloverCarriesUnsettledReservations(t *testing.T) {
+	t.Parallel()
 	path := stateFile(t)
 	fb := newFileBudget(path)
 	fb.now = fixedClock("2026-10-15T12:00:00Z")
@@ -248,6 +260,7 @@ func TestFileBudgetRolloverCarriesUnsettledReservations(t *testing.T) {
 }
 
 func TestFileBudgetFutureMonthFileRefusesUnchanged(t *testing.T) {
+	t.Parallel()
 	const content = `{"version":1,"month":"2099-01","spent_usd":5,"reservations":[]}`
 	path := stateFile(t)
 	require.NoError(t, ensureAuditLogDirectory(path))
@@ -261,6 +274,7 @@ func TestFileBudgetFutureMonthFileRefusesUnchanged(t *testing.T) {
 }
 
 func TestFileBudgetClockBehindFileRefuses(t *testing.T) {
+	t.Parallel()
 	path := stateFile(t)
 	fb := newFileBudget(path)
 	fb.now = fixedClock("2026-11-02T00:00:00Z")
@@ -280,6 +294,7 @@ func TestFileBudgetClockBehindFileRefuses(t *testing.T) {
 }
 
 func TestFileBudgetLockFileSymlinkRefused(t *testing.T) {
+	t.Parallel()
 	path := stateFile(t)
 	require.NoError(t, ensureAuditLogDirectory(path))
 	target := filepath.Join(t.TempDir(), "elsewhere")

@@ -172,6 +172,7 @@ func TestEnsureAuditLogWritableCreatesNestedHierarchy(t *testing.T) {
 }
 
 func TestEnsureAuditLogDirectoryRejectsUnreadableWalkAncestor(t *testing.T) {
+	t.Parallel()
 	if os.Geteuid() == 0 {
 		t.Skip("root bypasses directory read permission checks")
 	}

@@ -37,6 +37,7 @@ func usdSPRec(term string, details common.ServiceDetails) common.Recommendation 
 }
 
 func TestCommittedUSDPerProvider(t *testing.T) {
+	t.Parallel()
 	for _, svc := range []common.ServiceType{
 		common.ServiceEC2, common.ServiceRDS, common.ServiceElastiCache,
 		common.ServiceOpenSearch, common.ServiceRedshift, common.ServiceMemoryDB,
@@ -72,6 +73,7 @@ func TestCommittedUSDPerProvider(t *testing.T) {
 }
 
 func TestCommittedUSDFailsClosed(t *testing.T) {
+	t.Parallel()
 	aws := common.Recommendation{Provider: common.ProviderAWS, Service: common.ServiceEC2, Count: 2}
 	withCount := func(n int) common.Recommendation { r := aws; r.Count = n; return r }
 	tests := []struct {
@@ -133,6 +135,7 @@ func TestCommittedUSDFailsClosed(t *testing.T) {
 }
 
 func TestUSDCapBoundary(t *testing.T) {
+	t.Parallel()
 	rec := common.Recommendation{Provider: common.ProviderAWS, Service: common.ServiceEC2, Count: 2}
 	c := &offeringClient{od: usdOffering(500)}
 
@@ -151,6 +154,7 @@ func TestUSDCapBoundary(t *testing.T) {
 }
 
 func TestUSDCapInvalidLimit(t *testing.T) {
+	t.Parallel()
 	rec := common.Recommendation{Provider: common.ProviderAWS, Service: common.ServiceEC2, Count: 1}
 	for _, limit := range []float64{math.NaN(), math.Inf(1), 0, -1} {
 		c := &offeringClient{od: usdOffering(1)}

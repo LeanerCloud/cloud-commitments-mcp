@@ -97,6 +97,7 @@ func TestConvertibleAndDefaultClassKeepConvertiblePricing(t *testing.T) {
 }
 
 func TestStandardClassOnNonEC2StaysOnGenericPricing(t *testing.T) {
+	t.Parallel()
 	c := newClassPricedClient()
 	rec := testRecommendation()
 	rec.Service = common.ServiceRDS

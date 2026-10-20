@@ -363,12 +363,14 @@ func TestArcheraKeyNeverPrintable(t *testing.T) {
 }
 
 func TestArcheraProductionToolUsesDefaultHTTPClient(t *testing.T) {
+	t.Parallel()
 	tool, ok := NewArcheraComparisonTool().(*archeraComparisonTool)
 	require.True(t, ok)
 	assert.Nil(t, tool.httpClient)
 }
 
 func TestArcheraDescriptor(t *testing.T) {
+	t.Parallel()
 	d := NewArcheraComparisonTool().Descriptor()
 	assert.Equal(t, "cudly_archera_comparison", d.Name)
 	assert.Equal(t, "insurance", d.Product)
@@ -383,6 +385,7 @@ func TestArcheraDescriptor(t *testing.T) {
 }
 
 func TestArcheraBuildComparisonFetchedAtIsUTC(t *testing.T) {
+	t.Parallel()
 	zone := time.FixedZone("x", 2*3600)
 	dto, err := buildArcheraComparison(&insurance.Comparison{PlanID: testArcheraPlan, FetchedAt: time.Date(2026, 10, 10, 12, 0, 0, 0, zone)})
 	require.NoError(t, err)
@@ -425,6 +428,7 @@ func TestArcheraEmptyVendorListsRenderAsEmptyArrays(t *testing.T) {
 }
 
 func TestArcheraErrorMasksKeyAndKeepsContextErrors(t *testing.T) {
+	t.Parallel()
 	err := archeraError(fmt.Errorf("transport said %s twice: %s", testArcheraKey, testArcheraKey), testArcheraKey)
 	assert.Equal(t, "transport said [redacted] twice: [redacted]", err.Error())
 	assert.Same(t, context.Canceled, archeraError(context.Canceled, testArcheraKey))
@@ -433,6 +437,7 @@ func TestArcheraErrorMasksKeyAndKeepsContextErrors(t *testing.T) {
 }
 
 func TestArcheraBuildComparisonPropagatesUnrepresentableMoney(t *testing.T) {
+	t.Parallel()
 	c := &insurance.Comparison{PlanID: testArcheraPlan}
 	c.Current.Monthly.CommitmentCostTotal = big.NewRat(1, 3)
 	_, err := buildArcheraComparison(c)

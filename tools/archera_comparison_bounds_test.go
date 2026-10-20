@@ -15,6 +15,7 @@ import (
 )
 
 func TestArcheraInputSchemaBoundsEveryList(t *testing.T) {
+	t.Parallel()
 	s := mcp.NewServer(&mcp.Implementation{Name: "test", Version: "test"}, nil)
 	require.NoError(t, NewArcheraComparisonTool().Register(s))
 	ct, st := mcp.NewInMemoryTransports()
@@ -122,11 +123,13 @@ func TestArcheraComparisonResultSizeCap(t *testing.T) {
 }
 
 func TestArcheraCleanStringStopsAtByteCap(t *testing.T) {
+	t.Parallel()
 	// the multibyte rune does not fit; later ASCII must not be appended
 	assert.Equal(t, strings.Repeat("a", 255), archeraCleanString(strings.Repeat("a", 255)+"\u00e9b"))
 }
 
 func TestArcheraCheckSizeBoundary(t *testing.T) {
+	t.Parallel()
 	require.NoError(t, archeraCheckSize(archeraMaxResultBytes))
 	assert.Error(t, archeraCheckSize(archeraMaxResultBytes+1))
 }
@@ -147,6 +150,7 @@ func TestArcheraDecodeErrorShowsIdentifierOnly(t *testing.T) {
 }
 
 func TestArcheraDecimal(t *testing.T) {
+	t.Parallel()
 	str := func(s string) *string { return &s }
 	cases := []struct {
 		in   *big.Rat
@@ -173,6 +177,7 @@ func TestArcheraDecimal(t *testing.T) {
 }
 
 func TestArcheraCleanString(t *testing.T) {
+	t.Parallel()
 	assert.Equal(t, "ab", archeraCleanString("a\x00\u200bb\u2029"))
 	assert.Equal(t, strings.Repeat("a", 256), archeraCleanString(strings.Repeat("a", 300)))
 	// a multi-byte rune that would straddle byte 256 is dropped whole

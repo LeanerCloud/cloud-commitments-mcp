@@ -109,6 +109,7 @@ func rdsClient() *rdslib.Client {
 }
 
 func TestDedupeRDSFullyCoveredIsSuppressedAndListed(t *testing.T) {
+	t.Parallel()
 	p := awsProvider(map[common.ServiceType]provider.ServiceClient{common.ServiceRDS: rdsClient()})
 	kept, d, err := runDedupe(t, p, []common.Recommendation{rdsRec(2, "1yr", "all-upfront", dedupeCaller)})
 	require.NoError(t, err)
@@ -123,6 +124,7 @@ func TestDedupeRDSFullyCoveredIsSuppressedAndListed(t *testing.T) {
 }
 
 func TestDedupePartialCoverKeepsRecUnchangedWithCoveredCount(t *testing.T) {
+	t.Parallel()
 	p := awsProvider(map[common.ServiceType]provider.ServiceClient{common.ServiceRDS: rdsClient()})
 	rec := rdsRec(3, "1yr", "all-upfront", dedupeCaller)
 	kept, d, err := runDedupe(t, p, []common.Recommendation{rec})
@@ -137,6 +139,7 @@ func TestDedupePartialCoverKeepsRecUnchangedWithCoveredCount(t *testing.T) {
 }
 
 func TestDedupeVariantsOfSameDemandAreTreatedAlike(t *testing.T) {
+	t.Parallel()
 	p := awsProvider(map[common.ServiceType]provider.ServiceClient{common.ServiceRDS: rdsClient()})
 	recs := make([]common.Recommendation, 0, 6)
 	for _, term := range []string{"1yr", "3yr"} {
@@ -151,6 +154,7 @@ func TestDedupeVariantsOfSameDemandAreTreatedAlike(t *testing.T) {
 }
 
 func TestDedupeOtherAccountIsNeverSuppressed(t *testing.T) {
+	t.Parallel()
 	p := awsProvider(map[common.ServiceType]provider.ServiceClient{common.ServiceRDS: rdsClient()})
 	kept, d, err := runDedupe(t, p, []common.Recommendation{
 		rdsRec(2, "1yr", "all-upfront", dedupeOther),
@@ -166,6 +170,7 @@ func TestDedupeOtherAccountIsNeverSuppressed(t *testing.T) {
 }
 
 func TestDedupeNothingRecentLeavesRecsUntouched(t *testing.T) {
+	t.Parallel()
 	p := awsProvider(map[common.ServiceType]provider.ServiceClient{common.ServiceRDS: &listingClient{}})
 	rec := rdsRec(2, "1yr", "all-upfront", dedupeCaller)
 	kept, d, err := runDedupe(t, p, []common.Recommendation{rec})
@@ -178,6 +183,7 @@ func TestDedupeNothingRecentLeavesRecsUntouched(t *testing.T) {
 }
 
 func TestDedupeListsOncePerServiceRegion(t *testing.T) {
+	t.Parallel()
 	lc := &listingClient{}
 	p := awsProvider(map[common.ServiceType]provider.ServiceClient{common.ServiceRDS: lc})
 	recs := []common.Recommendation{
@@ -191,6 +197,7 @@ func TestDedupeListsOncePerServiceRegion(t *testing.T) {
 }
 
 func TestDedupeEC2IsFlagOnlyNeverHidden(t *testing.T) {
+	t.Parallel()
 	lc := &listingClient{commitments: []common.Commitment{{
 		Provider: common.ProviderAWS, Service: common.ServiceEC2, Region: "us-east-1", ResourceType: "m5.large",
 		Count: 10, State: common.CommitmentStateActive, StartDate: dedupeRecent,
@@ -210,6 +217,7 @@ func TestDedupeEC2IsFlagOnlyNeverHidden(t *testing.T) {
 }
 
 func TestDedupeSavingsPlansAreNotApplied(t *testing.T) {
+	t.Parallel()
 	p := awsProvider(nil)
 	rec := common.Recommendation{Provider: common.ProviderAWS, Service: common.ServiceSavingsPlansCompute, Account: dedupeCaller, Region: "us-east-1", Count: 1}
 	kept, d, err := runDedupe(t, p, []common.Recommendation{rec})
@@ -221,6 +229,7 @@ func TestDedupeSavingsPlansAreNotApplied(t *testing.T) {
 }
 
 func TestDedupeListingFailureFailsLoudNamingThePermission(t *testing.T) {
+	t.Parallel()
 	lc := &listingClient{err: errors.New("AccessDenied")}
 	p := awsProvider(map[common.ServiceType]provider.ServiceClient{common.ServiceRDS: lc})
 	kept, _, err := runDedupe(t, p, []common.Recommendation{rdsRec(2, "1yr", "all-upfront", dedupeCaller)})
@@ -231,6 +240,7 @@ func TestDedupeListingFailureFailsLoudNamingThePermission(t *testing.T) {
 }
 
 func TestDedupeNoCallerAccountFlagsEverything(t *testing.T) {
+	t.Parallel()
 	p := awsProvider(map[common.ServiceType]provider.ServiceClient{common.ServiceRDS: &listingClient{}})
 	p.accounts = nil
 	// No default account: nothing may be suppressed, everything is flagged.
@@ -241,6 +251,7 @@ func TestDedupeNoCallerAccountFlagsEverything(t *testing.T) {
 }
 
 func TestDedupeElastiCacheWildcardEngineNeverSuppresses(t *testing.T) {
+	t.Parallel()
 	cache := func(engine string) common.Recommendation {
 		return common.Recommendation{
 			Provider: common.ProviderAWS, Service: common.ServiceElastiCache, Account: dedupeCaller, Region: "us-east-1",
@@ -300,6 +311,7 @@ func (rsAPI) DescribeReservedNodes(_ context.Context, _ *rssdk.DescribeReservedN
 // listing: a key mismatch (an engine on one side only) would make the feature
 // silently do nothing.
 func TestDedupeEverySuppressingServiceSuppressesThroughItsRealListing(t *testing.T) {
+	t.Parallel()
 	osc := oslib.NewClient(aws.Config{Region: "us-east-1"})
 	osc.SetOpenSearchAPI(osAPI{})
 	rsc := rslib.NewClient(aws.Config{Region: "us-east-1"})
@@ -321,6 +333,7 @@ func TestDedupeEverySuppressingServiceSuppressesThroughItsRealListing(t *testing
 }
 
 func TestDedupeMemoryDBIsFlagOnly(t *testing.T) {
+	t.Parallel()
 	lc := &listingClient{commitments: []common.Commitment{{
 		Provider: common.ProviderAWS, Service: common.ServiceMemoryDB, Region: "us-east-1", ResourceType: "db.r6g.large",
 		Engine: "redis", Count: 2, State: common.CommitmentStateActive, StartDate: dedupeRecent,
@@ -340,6 +353,7 @@ func TestDedupeMemoryDBIsFlagOnly(t *testing.T) {
 // GCP is flag-only, and the provider's own family filter must still be
 // reached through the memoizing client.
 func TestDedupeGCPForwardsTheFamilyHookAndOnlyFlags(t *testing.T) {
+	t.Parallel()
 	client, err := computeengine.NewClient("test-project", "us-central1")
 	require.NoError(t, err)
 	client.SetCommitmentsService(&fakeGCPCommitmentsService{commitments: []*computepb.Commitment{{
@@ -368,6 +382,7 @@ func TestDedupeGCPForwardsTheFamilyHookAndOnlyFlags(t *testing.T) {
 }
 
 func TestSearchResultCarriesTheDedupeBlock(t *testing.T) {
+	t.Parallel()
 	client := &fakeRecommendationsClient{recs: []common.Recommendation{rdsRec(2, "1yr", "all-upfront", dedupeCaller)}}
 	fp := &fakeProvider{name: "aws", services: []common.ServiceType{common.ServiceRDS}, recClient: client,
 		svc: rdsClient(), accounts: []common.Account{{ID: dedupeCaller, IsDefault: true}}}
@@ -388,6 +403,7 @@ func TestSearchResultCarriesTheDedupeBlock(t *testing.T) {
 // Azure's reservation key ignores scope and term, so it is flag-only: a
 // commitment that would cover the rec must produce a flag, never a removal.
 func TestDedupeAzureIsFlagOnlyNeverSuppressed(t *testing.T) {
+	t.Parallel()
 	lc := &listingClient{commitments: []common.Commitment{{
 		Provider: common.ProviderAzure, Service: common.ServiceCompute, Region: "eastus", ResourceType: "Standard_D2s_v3",
 		Count: 4, State: common.CommitmentStateActive, StartDate: dedupeRecent,
@@ -408,6 +424,7 @@ func TestDedupeAzureIsFlagOnlyNeverSuppressed(t *testing.T) {
 
 // The error must name the permission that is actually missing.
 func TestDedupeAccountLookupFailureNamesTheRightPermission(t *testing.T) {
+	t.Parallel()
 	cases := map[string]struct{ err, want, notWant string }{
 		"sts":           {"failed to get current account: AccessDenied", "sts:GetCallerIdentity", "rds:DescribeReservedDBInstances"},
 		"organizations": {"organizations: list accounts: AccessDenied", "organizations:ListAccounts", "rds:DescribeReservedDBInstances"},
@@ -427,6 +444,7 @@ func TestDedupeAccountLookupFailureNamesTheRightPermission(t *testing.T) {
 }
 
 func TestDedupeServiceClientFailureClaimsNoPermission(t *testing.T) {
+	t.Parallel()
 	p := awsProvider(nil)
 	p.byService = map[common.ServiceType]provider.ServiceClient{}
 	_, _, err := runDedupe(t, p, []common.Recommendation{rdsRec(2, "1yr", "all-upfront", dedupeCaller)})

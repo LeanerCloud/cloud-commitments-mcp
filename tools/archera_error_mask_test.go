@@ -70,6 +70,7 @@ func withholdCases() map[string]string {
 }
 
 func TestArcheraErrorMasksKeyAfterSanitizing(t *testing.T) {
+	t.Parallel()
 	for name, msg := range maskCases() {
 		t.Run(name, func(t *testing.T) {
 			got := archeraError(errors.New(msg), maskTestKey).Error()
@@ -81,6 +82,7 @@ func TestArcheraErrorMasksKeyAfterSanitizing(t *testing.T) {
 }
 
 func TestArcheraErrorWithholdsTextWhenKeyStaysReadable(t *testing.T) {
+	t.Parallel()
 	for name, msg := range withholdCases() {
 		t.Run(name, func(t *testing.T) {
 			got := archeraError(errors.New(msg), maskTestKey)
@@ -91,6 +93,7 @@ func TestArcheraErrorWithholdsTextWhenKeyStaysReadable(t *testing.T) {
 }
 
 func TestArcheraErrorWithholdsWholeTextWithKeyAnywhere(t *testing.T) {
+	t.Parallel()
 	fe0f, ff := splitKey("\ufe0f"), splitKey("\xff")
 	half := maskTestKey[:10] + "\ufe0f" + maskTestKey[10:]
 	cases := map[string]string{
@@ -112,11 +115,13 @@ func TestArcheraErrorWithholdsWholeTextWithKeyAnywhere(t *testing.T) {
 }
 
 func TestArcheraErrorTrimsKeyBeforeMasking(t *testing.T) {
+	t.Parallel()
 	got := archeraError(errors.New("bad key "+splitKey("\u200b")), " "+maskTestKey+"\n").Error()
 	assert.Equal(t, "bad key [redacted]", got)
 }
 
 func TestArcheraErrorLeavesNoKeyPrefixAtCap(t *testing.T) {
+	t.Parallel()
 	for _, echo := range []string{maskTestKey, splitKey("\u200b")} {
 		got := archeraError(errors.New(strings.Repeat("a", 244)+echo), maskTestKey).Error()
 		assert.NotContains(t, got, maskTestKey[:8])
@@ -124,6 +129,7 @@ func TestArcheraErrorLeavesNoKeyPrefixAtCap(t *testing.T) {
 }
 
 func TestArcheraErrorContextErrorsAreSanitizedAndKeepIdentity(t *testing.T) {
+	t.Parallel()
 	assert.Same(t, context.Canceled, archeraError(context.Canceled, maskTestKey))
 	for name, echo := range map[string]string{
 		"plain": maskTestKey, "split": splitKey("\u200b"), "unstripped split": splitKey("\u0301"),
@@ -139,6 +145,7 @@ func TestArcheraErrorContextErrorsAreSanitizedAndKeepIdentity(t *testing.T) {
 }
 
 func TestArcheraCleanStringCapBoundary(t *testing.T) {
+	t.Parallel()
 	assert.Len(t, archeraCleanString(strings.Repeat("a", 256)), 256)
 	assert.Len(t, archeraCleanString(strings.Repeat("a", 257)), 256)
 }
@@ -181,6 +188,7 @@ func TestArcheraErrorMasksKeyOnRealPaths(t *testing.T) {
 }
 
 func TestArcheraErrorLeavesNoKeyPrefixAtAnyCut(t *testing.T) {
+	t.Parallel()
 	for name, sep := range map[string]string{"variation selector": "\ufe0f", "invalid byte": "\xff"} {
 		for pad := 220; pad <= 262; pad++ {
 			got := archeraError(errors.New(strings.Repeat("a", pad)+splitKey(sep)), maskTestKey).Error()

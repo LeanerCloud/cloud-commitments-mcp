@@ -70,6 +70,7 @@ func callListing(t *testing.T, rt http.RoundTripper, args map[string]any) (*mcp.
 }
 
 func TestArcheraListingWindowOrdersCaseInsensitivelyWithRawTieBreak(t *testing.T) {
+	t.Parallel()
 	rows := []insurance.LineItem{{ID: "b"}, {ID: "a"}, {ID: "B"}, {ID: "A"}, {ID: "c"}}
 	_, err := archeraListingWindow(rows, 0, 0, "")
 	require.NoError(t, err)

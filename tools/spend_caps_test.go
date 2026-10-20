@@ -223,6 +223,7 @@ func TestSavingsPlanPreviewShowsTotalCommitmentOffline(t *testing.T) {
 }
 
 func TestSavingsPlanCostDoesNotChangeIdempotencyKey(t *testing.T) {
+	t.Parallel()
 	rec := spRec(t, 10)
 	withCost := rec
 	withCost.CommitmentCost = 0
