@@ -1,0 +1,17 @@
+# gitleaks configuration for the CI "Secret scan (gitleaks)" step.
+# Extends the default ruleset; every allowlist below matches one exact literal.
+# Do NOT add `paths` with condition = "AND" here: in gitleaks 8.30.1 that skips
+# the whole file, so a real secret planted next to a fixture goes undetected.
+# scripts/test-gitleaks-config.sh guards this.
+title = "cloud-commitments-mcp gitleaks config"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "git-secrets 1.3.0 release commit SHA pinned in pre-commit.yml"
+regexes = ['''^ad82d68ee924906a0401dfd48de5057731a9bc84$''']
+
+[[allowlists]]
+description = "synthetic API key fixture in the Archera error mask test"
+regexes = ['''^test-key-SYNTHETIC-0000$''']
