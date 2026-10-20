@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -112,6 +113,20 @@ func TestBudgetExistingCommitmentReleases(t *testing.T) {
 	require.NoError(t, runWithNonce(fake, "a"))
 	assert.Zero(t, processBudget.committedUSD())
 	require.NoError(t, runWithNonce(fake, "a"))
+}
+
+func TestBudgetExistingCommitmentWithErrorStaysCounted(t *testing.T) {
+	resetBudget(t, "100")
+	fake := pricedFake(60, common.PurchaseResult{ExistingCommitment: true}, errors.New("boom"))
+	require.Error(t, runWithNonce(fake, "a"))
+	assert.InDelta(t, 60, processBudget.committedUSD(), 1e-9)
+}
+
+func TestBudgetExistingCommitmentWithResultErrorStaysCounted(t *testing.T) {
+	resetBudget(t, "100")
+	fake := pricedFake(60, common.PurchaseResult{ExistingCommitment: true, Error: errors.New("boom")}, nil)
+	_ = runWithNonce(fake, "a")
+	assert.InDelta(t, 60, processBudget.committedUSD(), 1e-9)
 }
 
 func TestBudgetUnsetRefusesBeforeResolve(t *testing.T) {
