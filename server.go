@@ -47,10 +47,11 @@ func registrations() []tools.Registration {
 //	server, err := mcp.NewServer("1.0.0")
 //	server.Run(ctx, &gosdk.StdioTransport{})
 func NewServer(version string) (*gosdk.Server, error) {
-	// A server that cannot durably write its purchase audit trail should not accept
-	// purchase calls at all. Failing here surfaces a misconfigured
-	// CUDLY_MCP_AUDIT_LOG at startup instead of silently dropping every
-	// audit record for the session.
+	// Startup-only check: refuse to build a server whose configured audit log
+	// (CUDLY_MCP_AUDIT_LOG) is unusable, so a misconfigured path surfaces here
+	// instead of silently dropping every record. It does not gate individual
+	// calls: a write failure later in a call only logs a warning on stderr and
+	// leaves the purchase result unchanged (tools/audit.go recordPurchaseAudit).
 	if err := tools.EnsureAuditLogWritable(); err != nil {
 		return nil, fmt.Errorf("audit log is not readable, writable, and directory-durable: %w", err)
 	}
