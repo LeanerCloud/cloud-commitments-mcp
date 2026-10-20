@@ -21,6 +21,7 @@ const (
 )
 
 func TestBuiltBinaryReportsInjectedVersion(t *testing.T) {
+	t.Parallel()
 	binPath := os.Getenv("CUDLY_MCP_TEST_BINARY")
 	if binPath == "" {
 		binPath = filepath.Join(t.TempDir(), "cudly-mcp")
