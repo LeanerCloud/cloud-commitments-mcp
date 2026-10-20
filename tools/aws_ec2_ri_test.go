@@ -287,3 +287,106 @@ func (r *recordingProvider) GetServiceClient(_ context.Context, service common.S
 	*r.gotRegion = region
 	return r.client, nil
 }
+
+func TestEC2OfferingClassSchemaEnumAndDefault(t *testing.T) {
+	t.Parallel()
+	schema, err := BuildInputSchema[ec2RIPurchaseArgs](map[string]FieldOverride{
+		"offering_class": {Enum: []any{string(OfferingClassStandard), string(OfferingClassConvertible)}, Default: string(OfferingClassConvertible)},
+	})
+	require.NoError(t, err)
+	raw, err := json.Marshal(schema)
+	require.NoError(t, err)
+	var got map[string]any
+	require.NoError(t, json.Unmarshal(raw, &got))
+	oc, ok := got["properties"].(map[string]any)["offering_class"].(map[string]any)
+	require.True(t, ok, "offering_class must be in the tool schema")
+	assert.ElementsMatch(t, []any{"standard", "convertible"}, oc["enum"])
+	assert.Equal(t, "convertible", oc["default"])
+	if req, ok := got["required"].([]any); ok {
+		assert.NotContains(t, req, "offering_class")
+	}
+}
+
+func TestAWSEC2RIPurchaseRegisteredSchemaHasOfferingClass(t *testing.T) {
+	t.Parallel()
+	srv := mcp.NewServer(&mcp.Implementation{Name: "t", Version: "0"}, nil)
+	require.NoError(t, NewAWSEC2RIPurchaseTool().Register(srv))
+	ct, st := mcp.NewInMemoryTransports()
+	ctx := context.Background()
+	ss, err := srv.Connect(ctx, st, nil)
+	require.NoError(t, err)
+	defer ss.Close()
+	cs, err := mcp.NewClient(&mcp.Implementation{Name: "c", Version: "0"}, nil).Connect(ctx, ct, nil)
+	require.NoError(t, err)
+	defer cs.Close()
+	list, err := cs.ListTools(ctx, nil)
+	require.NoError(t, err)
+	require.Len(t, list.Tools, 1)
+	raw, err := json.Marshal(list.Tools[0].InputSchema)
+	require.NoError(t, err)
+	assert.Contains(t, string(raw), `"offering_class"`)
+	assert.Contains(t, string(raw), `"standard"`)
+}
+
+func TestAWSEC2RIPurchaseOfferingClassPassThrough(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct{ in, want string }{
+		{"", "convertible"},
+		{"convertible", "convertible"},
+		{"standard", "standard"},
+	} {
+		t.Run("real_"+tc.want+"_from_"+tc.in, func(t *testing.T) {
+			t.Parallel()
+			fake := &fakeServiceClient{purchaseResult: common.PurchaseResult{Success: true, CommitmentID: "ri-abc"}}
+			var gotService common.ServiceType
+			var gotRegion string
+			tool := &awsEC2RIPurchaseTool{
+				createProvider: func(_ string, _ *provider.ProviderConfig) (provider.Provider, error) {
+					return &recordingProvider{fakeProvider: &fakeProvider{name: "aws"}, client: fake, gotService: &gotService, gotRegion: &gotRegion}, nil
+				},
+			}
+			args := validEC2Args()
+			args.OfferingClass = tc.in
+			args.DryRun = boolPtr(false)
+			args.Confirm = boolPtr(true)
+			_, resp, err := tool.handle(context.Background(), nil, args)
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, fake.lastOpts.OfferingClass)
+			assert.Equal(t, tc.want, resp.OfferingClass)
+		})
+	}
+}
+
+func TestAWSEC2RIPurchasePreviewShowsOfferingClass(t *testing.T) {
+	t.Parallel()
+	tool := &awsEC2RIPurchaseTool{createProvider: func(string, *provider.ProviderConfig) (provider.Provider, error) {
+		t.Fatal("dry run must not resolve a provider")
+		return nil, nil
+	}}
+	args := validEC2Args()
+	args.OfferingClass = "standard"
+	_, resp, err := tool.handle(context.Background(), nil, args)
+	require.NoError(t, err)
+	assert.True(t, resp.DryRun)
+	assert.Equal(t, "standard", resp.OfferingClass)
+}
+
+func TestAWSEC2RIPurchaseRejectsUnknownOfferingClass(t *testing.T) {
+	t.Parallel()
+	tool := &awsEC2RIPurchaseTool{createProvider: func(string, *provider.ProviderConfig) (provider.Provider, error) {
+		t.Fatal("invalid args must not resolve a provider")
+		return nil, nil
+	}}
+	args := validEC2Args()
+	args.OfferingClass = "Standard-ish"
+	_, _, err := tool.handle(context.Background(), nil, args)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "offering_class")
+}
+
+func TestIdempotencyKeyFoldsInOfferingClass(t *testing.T) {
+	t.Parallel()
+	rec, region, _, _, err := ec2RecommendationFromArgs(validEC2Args())
+	require.NoError(t, err)
+	assert.NotEqual(t, idempotencyKeyFor(region, rec, "", "", "standard"), idempotencyKeyFor(region, rec, "", "", "convertible"))
+}

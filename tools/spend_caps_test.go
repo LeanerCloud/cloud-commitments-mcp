@@ -227,6 +227,6 @@ func TestSavingsPlanCostDoesNotChangeIdempotencyKey(t *testing.T) {
 	withCost := rec
 	withCost.CommitmentCost = 0
 	assert.Equal(t,
-		idempotencyKeyFor("us-east-1", rec, "s", ""),
-		idempotencyKeyFor("us-east-1", withCost, "s", ""))
+		idempotencyKeyFor("us-east-1", rec, "s", "", ""),
+		idempotencyKeyFor("us-east-1", withCost, "s", "", ""))
 }

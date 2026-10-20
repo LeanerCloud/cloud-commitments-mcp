@@ -70,8 +70,8 @@ func TestAccountLevelSavingsPlanRegionCannotForkIdempotencyToken(t *testing.T) {
 				"an ignored region must not change the resolved region for an account-level plan")
 
 			scope := CredentialScope(withRegion.AWSProfile, "AWS_PROFILE")
-			tokenA := idempotencyKeyFor(regionA, recA, scope, "")
-			tokenB := idempotencyKeyFor(regionB, recB, scope, "")
+			tokenA := idempotencyKeyFor(regionA, recA, scope, "", "")
+			tokenB := idempotencyKeyFor(regionB, recB, scope, "", "")
 			assert.Equal(t, tokenA, tokenB,
 				"supplying an ignored region must not fork the idempotency token -- a forked token means the retry does not dedupe and buys a second plan")
 		})
@@ -117,8 +117,8 @@ func TestEC2InstanceSavingsPlanStillHonorsRegion(t *testing.T) {
 
 	scope := CredentialScope(validSavingsPlansArgs().AWSProfile, "AWS_PROFILE")
 	assert.NotEqual(t,
-		idempotencyKeyFor(region, rec, scope, ""),
-		idempotencyKeyFor(otherRegion, otherRec, scope, ""),
+		idempotencyKeyFor(region, rec, scope, "", ""),
+		idempotencyKeyFor(otherRegion, otherRec, scope, "", ""),
 		"an EC2Instance plan is region-scoped, so two regions must derive DIFFERENT tokens -- collapsing them would dedupe away a legitimately distinct purchase")
 }
 

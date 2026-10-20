@@ -28,9 +28,9 @@ func TestIdempotencyKeyDistinguishesCredentialScope(t *testing.T) {
 	rec := testRecommendation()
 	region := "us-east-1"
 
-	subAKey := idempotencyKeyFor(region, rec, "subscription-a", "")
-	subBKey := idempotencyKeyFor(region, rec, "subscription-b", "")
-	subAKeyAgain := idempotencyKeyFor(region, rec, "subscription-a", "")
+	subAKey := idempotencyKeyFor(region, rec, "subscription-a", "", "")
+	subBKey := idempotencyKeyFor(region, rec, "subscription-b", "", "")
+	subAKeyAgain := idempotencyKeyFor(region, rec, "subscription-a", "", "")
 
 	assert.NotEqual(t, subAKey, subBKey,
 		"identical purchases billed to different accounts must derive different tokens")

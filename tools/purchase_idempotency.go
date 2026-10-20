@@ -60,10 +60,10 @@ import (
 // purchase becomes a distinct one (e.g. "buy 3 now" then "buy 3 more next
 // week" by passing a fresh nonce on the second call); the same nonce plus
 // the same dimensions still dedupes a nonce'd retry.
-func idempotencyKeyFor(region string, rec common.Recommendation, scope, nonce string) string {
-	return fmt.Sprintf("mcp:%s:%s:%s:%s:%s:%d:%s:%s:%s:%s",
+func idempotencyKeyFor(region string, rec common.Recommendation, scope, nonce, offeringClass string) string {
+	return fmt.Sprintf("mcp:%s:%s:%s:%s:%s:%d:%s:%s:%s:%s:%s",
 		rec.Provider, scope, region, rec.Service, rec.ResourceType, rec.Count, rec.Term, rec.PaymentOption,
-		detailsKeyComponent(rec.Details), nonce)
+		detailsKeyComponent(rec.Details), offeringClass, nonce)
 }
 
 // detailsKeyComponent returns a canonical, deterministic encoding of every

@@ -170,6 +170,28 @@ func ValidateTenancy(s string) (Tenancy, error) {
 	}
 }
 
+// OfferingClass is the EC2 RI offering class. Values match ec2types.OfferingClassType
+// lowercased, which is what providers/aws/services/ec2/client.go:393
+// (resolveOfferingClassType) accepts via common.PurchaseOptions.OfferingClass.
+type OfferingClass string
+
+const (
+	OfferingClassConvertible OfferingClass = "convertible"
+	OfferingClassStandard    OfferingClass = "standard"
+)
+
+// ValidateOfferingClass returns the typed OfferingClass for s, or an explicit
+// error when s is neither standard nor convertible. Empty is rejected: callers
+// apply the convertible default before validating.
+func ValidateOfferingClass(s string) (OfferingClass, error) {
+	switch OfferingClass(s) {
+	case OfferingClassConvertible, OfferingClassStandard:
+		return OfferingClass(s), nil
+	default:
+		return "", fmt.Errorf("invalid offering_class %q: must be %s or %s", s, OfferingClassStandard, OfferingClassConvertible)
+	}
+}
+
 // Scope is the EC2 RI applicability dimension. Values are the lowercase,
 // hyphenated form that providers/aws/services/ec2/client.go:330-339
 // (canonicalizeEC2Scope) recognizes and normalizes to the SDK's

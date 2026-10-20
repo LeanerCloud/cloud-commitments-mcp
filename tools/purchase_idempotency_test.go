@@ -69,8 +69,8 @@ func TestIdempotencyKeyDistinguishesSavingsPlanHourlyCommitment(t *testing.T) {
 	expensiveRec, _, _, _, err := savingsPlanRecommendationFromArgs(expensiveArgs)
 	require.NoError(t, err)
 
-	cheapKey := idempotencyKeyFor(region, cheapRec, "", "")
-	expensiveKey := idempotencyKeyFor(region, expensiveRec, "", "")
+	cheapKey := idempotencyKeyFor(region, cheapRec, "", "", "")
+	expensiveKey := idempotencyKeyFor(region, expensiveRec, "", "", "")
 	assert.NotEqual(t, cheapKey, expensiveKey,
 		"a $5/hr and a $50/hr Compute Savings Plan must not derive the same idempotency key")
 }
@@ -94,8 +94,8 @@ func TestIdempotencyKeyDistinguishesEC2Platform(t *testing.T) {
 	windowsRec, windowsRegion, _, _, err := ec2RecommendationFromArgs(windowsArgs)
 	require.NoError(t, err)
 
-	linuxKey := idempotencyKeyFor(linuxRegion, linuxRec, "", "")
-	windowsKey := idempotencyKeyFor(windowsRegion, windowsRec, "", "")
+	linuxKey := idempotencyKeyFor(linuxRegion, linuxRec, "", "", "")
+	windowsKey := idempotencyKeyFor(windowsRegion, windowsRec, "", "", "")
 	assert.NotEqual(t, linuxKey, windowsKey,
 		"a Linux and a Windows EC2 RI purchase must not derive the same idempotency key")
 }
@@ -116,8 +116,8 @@ func TestIdempotencyKeySameDimensionsNoNonceAlwaysMatch(t *testing.T) {
 	rec := testRecommendation()
 	region := "us-east-1"
 
-	key1 := idempotencyKeyFor(region, rec, "", "")
-	key2 := idempotencyKeyFor(region, rec, "", "")
+	key1 := idempotencyKeyFor(region, rec, "", "", "")
+	key2 := idempotencyKeyFor(region, rec, "", "", "")
 	assert.Equal(t, key1, key2,
 		"identical dimensions with no nonce must always derive the same key, so a retry never double-buys")
 }
@@ -132,10 +132,10 @@ func TestIdempotencyKeyNonceAuthorizesDistinctRepeat(t *testing.T) {
 	rec := testRecommendation()
 	region := "us-east-1"
 
-	noNonceKey := idempotencyKeyFor(region, rec, "", "")
-	nonceAKey1 := idempotencyKeyFor(region, rec, "", "nonce-a")
-	nonceAKey2 := idempotencyKeyFor(region, rec, "", "nonce-a")
-	nonceBKey := idempotencyKeyFor(region, rec, "", "nonce-b")
+	noNonceKey := idempotencyKeyFor(region, rec, "", "", "")
+	nonceAKey1 := idempotencyKeyFor(region, rec, "", "nonce-a", "")
+	nonceAKey2 := idempotencyKeyFor(region, rec, "", "nonce-a", "")
+	nonceBKey := idempotencyKeyFor(region, rec, "", "nonce-b", "")
 
 	assert.NotEqual(t, noNonceKey, nonceAKey1,
 		"supplying a nonce must authorize a purchase distinct from the no-nonce default")

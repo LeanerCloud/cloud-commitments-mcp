@@ -98,6 +98,11 @@ type PurchaseRequest struct {
 	// hazard on Azure specifically.
 	CredentialScope string
 
+	// OfferingClass is the EC2 RI offering class (standard|convertible).
+	// Empty for every other tool. It is price-affecting, so it is folded into
+	// the idempotency key, echoed in the response, and passed to the provider.
+	OfferingClass string
+
 	Recommendation common.Recommendation
 	DryRun         bool
 	Confirm        bool
@@ -155,9 +160,12 @@ type PurchaseResponse struct {
 
 	CommitmentID string `json:"commitment_id,omitempty"`
 	Error        string `json:"error,omitempty"`
-	TermYears    int    `json:"term_years,omitempty"`
-	Success      bool   `json:"success"`
-	DryRun       bool   `json:"dry_run"`
+	// OfferingClass echoes the EC2 RI offering class so the user sees it in
+	// the preview before buying; omitted for other products.
+	OfferingClass string `json:"offering_class,omitempty"`
+	TermYears     int    `json:"term_years,omitempty"`
+	Success       bool   `json:"success"`
+	DryRun        bool   `json:"dry_run"`
 }
 
 // ArcheraOffer is the post-purchase Archera underutilization-insurance offer.
@@ -404,6 +412,7 @@ func ExecutePurchase(ctx context.Context, req PurchaseRequest) (*PurchaseRespons
 			EstimatedSavings:  nonZeroCostPtr(rec.EstimatedSavings),
 			SavingsPercentage: nonZeroCostPtr(rec.SavingsPercentage),
 			TermYears:         termYearsFromRecommendationTerm(rec.Term),
+			OfferingClass:     req.OfferingClass,
 		}, nil
 	}
 
@@ -413,10 +422,11 @@ func ExecutePurchase(ctx context.Context, req PurchaseRequest) (*PurchaseRespons
 		return nil, refusal
 	}
 
-	token := common.DeriveIdempotencyToken(idempotencyKeyFor(req.Region, rec, req.CredentialScope, req.Nonce), 0)
+	token := common.DeriveIdempotencyToken(idempotencyKeyFor(req.Region, rec, req.CredentialScope, req.Nonce, req.OfferingClass), 0)
 	opts := common.PurchaseOptions{
 		Source:           common.PurchaseSourceMCP,
 		IdempotencyToken: token,
+		OfferingClass:    req.OfferingClass,
 	}
 
 	return purchaseAndSettle(ctx, req, client, opts, reservation)
@@ -445,7 +455,9 @@ func purchaseAndSettle(ctx context.Context, req PurchaseRequest, client provider
 	logPurchaseOutcome(rec, token, auditResult.CommitmentID, purchaseSucceeded(auditResult), auditResult.Error)
 	recordPurchaseAudit(rec, req.CredentialScope, auditResult, auditStatusFor(auditResult), false)
 
-	return purchaseResponse(rec, result), nil
+	resp := purchaseResponse(rec, result)
+	resp.OfferingClass = req.OfferingClass
+	return resp, nil
 }
 
 // purchaseResponse maps a provider result to the tool response.
