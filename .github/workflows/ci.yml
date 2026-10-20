@@ -3,10 +3,10 @@
 # This workflow runs on every pull request and push to main/develop branches.
 # It performs comprehensive quality checks before allowing code to be merged.
 #
-# Required GitHub Secrets: None (all checks run without cloud credentials)
+# Required GitHub Secrets: None (all checks run without cloud credentials).
+# Optional: SNYK_TOKEN enables the non-gating Snyk scan.
 #
-# Required GitHub Variables:
-#   - GO_VERSION: Go version to use (default: 1.26.9)
+# Required GitHub Variables: None
 #
 # Triggered by:
 #   - Pull requests to main/develop
@@ -24,9 +24,6 @@ on:
   push:
     branches: [main, develop]
   workflow_dispatch:
-
-env:
-  GO_VERSION: '1.26.9'
 
 jobs:
   lint:
@@ -565,6 +562,9 @@ jobs:
         with:
           go-version-file: go.mod
 
+      # Non-gating on purpose: Snyk is an external service, so its outages or
+      # rate limits must not block merges. It is deliberately absent from
+      # ci-success.needs.
       - name: Run Snyk to check for vulnerabilities
         uses: snyk/actions/golang@9adf32b1121593767fc3c057af55b55db032dc04 # 1.0.0
         continue-on-error: true
