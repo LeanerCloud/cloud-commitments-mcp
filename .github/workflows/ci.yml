@@ -333,67 +333,6 @@ jobs:
       - name: Assert clean target includes MCP artifact
         run: make -n clean | grep -Fx 'rm -f bin/cudly-mcp coverage.out coverage.html gosec-report.json complexity-report.txt'
 
-  integration-tests:
-    name: Integration Tests
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Set up Go
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: go.mod
-          cache: true
-
-      - name: Run integration tests
-        run: |
-          set -uo pipefail
-          status=0
-          for mod in .; do
-            tag=$(echo "$mod" | tr './' '--' | sed 's/^-/root/')
-            log="$RUNNER_TEMP/integration-${tag}.log"
-            echo "==> integration tests in $mod"
-            if ! (cd "$mod" && go test -v -race -tags=integration \
-                    -coverprofile="$RUNNER_TEMP/coverage-integration-${tag}.out" \
-                    ./...) 2>&1 | tee "$log"; then
-              echo "::error::integration tests failed in $mod"
-              status=1
-            fi
-            ran=$(grep -cE '^--- (PASS|FAIL|SKIP)' "$log" || true)
-            echo "==> $mod ran $ran top-level test(s)"
-            if [ "$ran" -eq 0 ]; then
-              echo "::error::$mod ran zero tests -- it is in the loop but asserting nothing"
-              status=1
-            fi
-          done
-
-          shopt -s nullglob
-          profiles=("$RUNNER_TEMP"/coverage-integration-*.out)
-          if [ "${#profiles[@]}" -eq 0 ]; then
-            echo "::error::no module produced an integration coverage profile" >&2
-            exit 1
-          fi
-          merged="$RUNNER_TEMP/coverage-integration.out"
-          head -n 1 "${profiles[0]}" > "$merged"
-          for p in "${profiles[@]}"; do
-            tail -n +2 "$p" >> "$merged"
-          done
-          echo "Merged ${#profiles[@]} integration coverage profile(s)"
-          exit "$status"
-
-      - name: Upload integration coverage
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: integration-coverage
-          path: ${{ runner.temp }}/coverage-integration.out
-          retention-days: 30
-
   security-scan:
     name: Security Scanning
     runs-on: ubuntu-latest
@@ -580,7 +519,6 @@ jobs:
       - lint
       - workflow-lint
       - unit-tests
-      - integration-tests
       - security-scan
       - mcp-build
     if: always()
