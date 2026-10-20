@@ -102,14 +102,14 @@
       "type": "number",
       "title": "Maximum commitment per purchase call (USD)",
       "description": "Per-call ceiling on the total USD one purchase commits over its full term, priced by the provider just before buying. Required before any real purchase: leave it empty and purchases are refused. USD only; purchases that cannot be priced (including real GCP CUD purchases for now) are refused. Applies per call, not cumulatively.",
-      "min": 1,
+      "min": 0.01,
       "required": false
     },
     "budget_usd": {
       "type": "number",
       "title": "Cumulative purchase budget per server process (USD)",
       "description": "Total USD that real purchases may commit over their full terms in one server process. Required before any real purchase: leave it empty and purchases are refused. Held in memory: it resets when the server restarts, is not shared across processes or MCP clients, and cannot see purchases made in the cloud console, CLI or elsewhere. A purchase with an unknown outcome counts as spent.",
-      "min": 1,
+      "min": 0.01,
       "required": false
     },
     "archera_api_key": {
