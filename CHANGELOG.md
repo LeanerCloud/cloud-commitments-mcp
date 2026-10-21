@@ -43,6 +43,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Security
 
+- Bump Go to 1.26.10 to pick up the fix for GO-2026-6809 (crypto/x509), which `govulncheck` now reports against 1.26.9.
 - A small `CUDLY_MCP_MAX_COUNT` no longer admits an enormous purchase (50 x
   `u-24tb1` is about $286M): the USD cap bounds the real total.
 
