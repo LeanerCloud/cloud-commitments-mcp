@@ -30,7 +30,7 @@ const (
 // every real (non-preview) purchase this server executes. The model-supplied
 // confirm flag (decidePurchaseMode) only proves the model asked to spend
 // money; it says nothing about whether the operator running this MCP server
-// process wants it able to. mcp/README.md previously documented confirm as
+// process wants it able to. README.md previously documented confirm as
 // "a guardrail against an accidental call, not an authorization control",
 // which left a prompt-injected or simply hallucinating model, given ambient
 // production credentials, able to execute a real purchase from a single tool
