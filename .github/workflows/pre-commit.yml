@@ -128,21 +128,6 @@ jobs:
         # scan clean.
         run: bash scripts/test-git-secrets-allowlist.sh
 
-      # Note: the local `hadolint` hook in .pre-commit-config.yaml (search for
-      # `id: hadolint`; no line number, because this comment has already gone
-      # stale twice as that file shifted) runs ghcr.io/hadolint/hadolint pinned
-      # by digest. The version lives in that entry and is the single source of
-      # truth; do not restate it here, or this comment rots again. We do NOT
-      # install a host binary here — it would be dead code (never invoked by
-      # the hook) AND a supply-chain hole (latest tag, no checksum). Note:
-      # an earlier version of this comment claimed the hook already pinned
-      # the image to v2.14.0 via the hook repo's `rev:` -- it did not; that
-      # `rev:` only pins hadolint's *hook definition*, whose upstream entry
-      # (`ghcr.io/hadolint/hadolint hadolint`) has no image tag and floats to
-      # `:latest`. See the digest pin in .pre-commit-config.yaml for the fix.
-      # If a future change switches the hook to a host binary, install a
-      # pinned + sha256-verified binary here.
-
       - name: Install pre-commit
         run: pip install 'pre-commit==4.0.1'
 
