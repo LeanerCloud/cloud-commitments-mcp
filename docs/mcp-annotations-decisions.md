@@ -107,7 +107,7 @@ and every purchase tool (reaches a live provider purchase API).
 nothing at the Go type level stops a new tool from leaving it nil or
 building one by hand instead of calling `readOnlyAnnotations`/
 `purchaseAnnotations`, so none of this is compiler-enforced. The guarantee
-is carried entirely by `mcp/annotations_test.go`, run in CI on every push:
+is carried entirely by `annotations_test.go`, run in CI on every push:
 
 - `TestToolAnnotationsMatchDescriptor` is the drift test: it drives a real
   `ListTools` call over the in-memory MCP transport and asserts, in both
