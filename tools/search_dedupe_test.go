@@ -4,11 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
 
 	"cloud.google.com/go/compute/apiv1/computepb"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	ecsdk "github.com/aws/aws-sdk-go-v2/service/elasticache"
 	ectypes "github.com/aws/aws-sdk-go-v2/service/elasticache/types"
@@ -231,6 +234,13 @@ func TestDedupeSavingsPlansAreNotApplied(t *testing.T) {
 	assert.Equal(t, 0, p.calls, "no client is resolved for an unchecked group")
 }
 
+func azureErr(status int) error {
+	u, _ := url.Parse("https://management.azure.com/x")
+	return &azcore.ResponseError{StatusCode: status, ErrorCode: "AuthorizationFailed", RawResponse: &http.Response{
+		StatusCode: status, Status: http.StatusText(status), Request: &http.Request{Method: "GET", URL: u},
+		Header: http.Header{}, Body: http.NoBody}}
+}
+
 func TestDedupeListingFailureHintMatchesTheCause(t *testing.T) {
 	t.Parallel()
 	cases := map[string]struct {
@@ -239,10 +249,14 @@ func TestDedupeListingFailureHintMatchesTheCause(t *testing.T) {
 	}{
 		"aws access denied": {&smithy.OperationError{ServiceID: "RDS", OperationName: "DescribeReservedDBInstances",
 			Err: &smithy.GenericAPIError{Code: "AccessDenied", Message: "not allowed"}}, true},
-		"aws unauthorized operation": {&smithy.GenericAPIError{Code: "UnauthorizedOperation", Message: "nope"}, true},
-		"gcp forbidden":              {&googleapi.Error{Code: 403, Message: "forbidden"}, true},
-		"date parse error":           {errors.New(`savings plan sp-1: parsing start "garbage": invalid date`), false},
-		"throttle":                   {&smithy.GenericAPIError{Code: "Throttling", Message: "slow down"}, false},
+		"aws unauthorized operation":  {&smithy.GenericAPIError{Code: "UnauthorizedOperation", Message: "nope"}, true},
+		"aws access denied exception": {&smithy.GenericAPIError{Code: "AccessDeniedException", Message: "not allowed"}, true},
+		"azure unauthorized":          {azureErr(401), true},
+		"azure forbidden":             {azureErr(403), true},
+		"azure not found":             {azureErr(404), false},
+		"gcp forbidden":               {&googleapi.Error{Code: 403, Message: "forbidden"}, true},
+		"date parse error":            {errors.New(`savings plan sp-1: parsing start "garbage": invalid date`), false},
+		"throttle":                    {&smithy.GenericAPIError{Code: "Throttling", Message: "slow down"}, false},
 	}
 	for name, c := range cases {
 		t.Run(name, func(t *testing.T) {

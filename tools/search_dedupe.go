@@ -285,7 +285,7 @@ func dedupeFailure(gk groupKey, first common.Recommendation, err error) error {
 			return fmt.Errorf("dedupe check failed for %s in %s: %w; the credentials need %s to list existing commitments; no recommendations returned",
 				gk.service, gk.region, err, listPermission(first))
 		}
-		return fmt.Errorf("dedupe check failed for %s in %s: listing existing commitments failed: %w; no recommendations returned",
+		return fmt.Errorf("dedupe check failed for %s in %s: could not check existing commitments: %w; no recommendations returned",
 			gk.service, gk.region, err)
 	}
 	return fmt.Errorf("dedupe check failed for %s in %s: %w; no recommendations returned", gk.service, gk.region, err)
