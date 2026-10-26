@@ -4,12 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"reflect"
 	"strings"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/LeanerCloud/cloud-commitments-go/pkg/common"
 	"github.com/LeanerCloud/cloud-commitments-go/pkg/provider"
 	"github.com/LeanerCloud/cloud-commitments-go/pkg/recfilter"
+	"github.com/aws/smithy-go"
+	"google.golang.org/api/googleapi"
 )
 
 // dedupeMode says what the search does with a recommendation that recent
@@ -277,10 +281,33 @@ func dedupeFailure(gk groupKey, first common.Recommendation, err error) error {
 		return fmt.Errorf("dedupe check failed for %s in %s: %w; the credentials need %s to identify the calling account; no recommendations returned",
 			gk.service, gk.region, err, acct.permission)
 	case errors.As(err, &list):
-		return fmt.Errorf("dedupe check failed for %s in %s: %w; the credentials need %s to list existing commitments; no recommendations returned",
-			gk.service, gk.region, err, listPermission(first))
+		if isAccessDenied(err) {
+			return fmt.Errorf("dedupe check failed for %s in %s: %w; the credentials need %s to list existing commitments; no recommendations returned",
+				gk.service, gk.region, err, listPermission(first))
+		}
+		return fmt.Errorf("dedupe check failed for %s in %s: could not check existing commitments: %w; no recommendations returned",
+			gk.service, gk.region, err)
 	}
 	return fmt.Errorf("dedupe check failed for %s in %s: %w; no recommendations returned", gk.service, gk.region, err)
+}
+
+// isAccessDenied reports whether err is a provider authorization failure, as
+// opposed to a data or transport error (for example a commitment with an
+// unparseable date), which a permission hint would mislead.
+func isAccessDenied(err error) bool {
+	var api smithy.APIError
+	if errors.As(err, &api) {
+		switch api.ErrorCode() {
+		case "AccessDenied", "AccessDeniedException", "UnauthorizedOperation", "UnauthorizedAccess":
+			return true
+		}
+	}
+	var az *azcore.ResponseError
+	if errors.As(err, &az) && (az.StatusCode == http.StatusUnauthorized || az.StatusCode == http.StatusForbidden) {
+		return true
+	}
+	var g *googleapi.Error
+	return errors.As(err, &g) && (g.Code == http.StatusUnauthorized || g.Code == http.StatusForbidden)
 }
 
 type recDecision struct {

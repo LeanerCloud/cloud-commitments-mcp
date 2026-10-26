@@ -4,10 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net/http"
+	"net/url"
+	"strings"
 	"testing"
 	"time"
 
 	"cloud.google.com/go/compute/apiv1/computepb"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	ecsdk "github.com/aws/aws-sdk-go-v2/service/elasticache"
 	ectypes "github.com/aws/aws-sdk-go-v2/service/elasticache/types"
@@ -17,8 +21,10 @@ import (
 	rdstypes "github.com/aws/aws-sdk-go-v2/service/rds/types"
 	rssdk "github.com/aws/aws-sdk-go-v2/service/redshift"
 	rstypes "github.com/aws/aws-sdk-go-v2/service/redshift/types"
+	"github.com/aws/smithy-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/api/googleapi"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/LeanerCloud/cloud-commitments-go/pkg/common"
@@ -228,15 +234,42 @@ func TestDedupeSavingsPlansAreNotApplied(t *testing.T) {
 	assert.Equal(t, 0, p.calls, "no client is resolved for an unchecked group")
 }
 
-func TestDedupeListingFailureFailsLoudNamingThePermission(t *testing.T) {
+func azureErr(status int) error {
+	u, _ := url.Parse("https://management.azure.com/x")
+	return &azcore.ResponseError{StatusCode: status, ErrorCode: "AuthorizationFailed", RawResponse: &http.Response{
+		StatusCode: status, Status: http.StatusText(status), Request: &http.Request{Method: "GET", URL: u},
+		Header: http.Header{}, Body: http.NoBody}}
+}
+
+func TestDedupeListingFailureHintMatchesTheCause(t *testing.T) {
 	t.Parallel()
-	lc := &listingClient{err: errors.New("AccessDenied")}
-	p := awsProvider(map[common.ServiceType]provider.ServiceClient{common.ServiceRDS: lc})
-	kept, _, err := runDedupe(t, p, []common.Recommendation{rdsRec(2, "1yr", "all-upfront", dedupeCaller)})
-	require.Error(t, err)
-	assert.Nil(t, kept)
-	assert.Contains(t, err.Error(), "rds:DescribeReservedDBInstances")
-	assert.Contains(t, err.Error(), "AccessDenied")
+	cases := map[string]struct {
+		err      error
+		wantHint bool
+	}{
+		"aws access denied": {&smithy.OperationError{ServiceID: "RDS", OperationName: "DescribeReservedDBInstances",
+			Err: &smithy.GenericAPIError{Code: "AccessDenied", Message: "not allowed"}}, true},
+		"aws unauthorized operation":  {&smithy.GenericAPIError{Code: "UnauthorizedOperation", Message: "nope"}, true},
+		"aws access denied exception": {&smithy.GenericAPIError{Code: "AccessDeniedException", Message: "not allowed"}, true},
+		"azure unauthorized":          {azureErr(401), true},
+		"azure forbidden":             {azureErr(403), true},
+		"azure not found":             {azureErr(404), false},
+		"gcp forbidden":               {&googleapi.Error{Code: 403, Message: "forbidden"}, true},
+		"date parse error":            {errors.New(`savings plan sp-1: parsing start "garbage": invalid date`), false},
+		"throttle":                    {&smithy.GenericAPIError{Code: "Throttling", Message: "slow down"}, false},
+	}
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			p := awsProvider(map[common.ServiceType]provider.ServiceClient{common.ServiceRDS: &listingClient{err: c.err}})
+			kept, _, err := runDedupe(t, p, []common.Recommendation{rdsRec(2, "1yr", "all-upfront", dedupeCaller)})
+			require.Error(t, err, "the search fails closed on any listing error")
+			assert.Nil(t, kept)
+			assert.Contains(t, err.Error(), c.err.Error())
+			assert.Equal(t, c.wantHint, strings.Contains(err.Error(), "rds:DescribeReservedDBInstances"))
+			assert.Equal(t, c.wantHint, strings.Contains(err.Error(), "the credentials need"))
+		})
+	}
 }
 
 func TestDedupeNoCallerAccountFlagsEverything(t *testing.T) {

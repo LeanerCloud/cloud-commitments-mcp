@@ -28,19 +28,6 @@ repos:
         pass_filenames: false
         files: \.go$
 
-  # Terraform formatting
-  - repo: https://github.com/antonbabenko/pre-commit-terraform
-    rev: d0e12caebb2ab0ee8bf98181c8bfe9702bca103d  # v1.105.0
-    hooks:
-      - id: terraform_fmt
-        name: Terraform format
-      - id: terraform_validate
-        name: Terraform validate
-      - id: terraform_tflint
-        name: Terraform lint
-        args:
-          - --args=--config=__GIT_WORKING_DIR__/.tflint.hcl
-
   # General file checks
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c  # v6.0.0
@@ -51,7 +38,6 @@ repos:
         name: Fix end of files
       - id: check-yaml
         name: Check YAML syntax
-        exclude: '^(docker-compose.*\.yml|cloudformation/.*|iac/.*/cloudformation/.*)$'
       - id: check-json
         name: Check JSON syntax
       - id: check-added-large-files
@@ -64,33 +50,6 @@ repos:
       - id: check-case-conflict
         name: Check for case conflicts
 
-  # Dockerfile linting
-  #
-  # The upstream hadolint-docker hook (hadolint/hadolint's own
-  # .pre-commit-hooks.yaml) declares `entry: ghcr.io/hadolint/hadolint
-  # hadolint` with no image tag, so Docker resolves it to `:latest` on every
-  # run -- independent of any `rev:` pin, which only pins which commit of the
-  # *hook definition* is used, not the Docker image it runs. When upstream
-  # published hadolint 2.15.1 as `latest`, CI silently started linting with a
-  # newer ruleset (new DL3066/DL3025 findings on unchanged Dockerfiles) with no
-  # corresponding change in this repo, and `main` went red (issue #1695).
-  #
-  # Defined as a local hook instead, pinned to an immutable digest, so the
-  # linter version can only change through an explicit edit to this line.
-  #
-  # Pinned to 2.15.1 -- the version that surfaced the findings -- rather than
-  # back to 2.14.0. Pinning to the older image would also have made CI green,
-  # but only by un-seeing findings that are real; the four it reported are
-  # fixed in the Dockerfiles rather than silenced. Bumping this digest is
-  # expected to require fixing whatever the new version finds.
-  - repo: local
-    hooks:
-      - id: hadolint
-        name: Lint Dockerfiles
-        language: docker_image
-        entry: ghcr.io/hadolint/hadolint:v2.15.1@sha256:32dac94127fd60b7b7e3fbfc65e1383b9b5e25c9bfd7b8536de7a539fe68a12d hadolint
-        types: [dockerfile]
-
   # GitHub Actions workflow linting
   #
   # Runs the same two linters as ci.yml's workflow-lint job, at the same pinned
@@ -98,10 +57,9 @@ repos:
   # after. Keep the versions here and in ci.yml in lockstep.
   #
   # actionlint is a local docker_image hook rather than the upstream
-  # rhysd/actionlint hook for the reason spelled out above for hadolint: the
-  # upstream actionlint-docker hook's entry pins the image by mutable tag, and
-  # `rev:` only pins the hook definition, not the image it runs. This entry
-  # pins the digest, so the ruleset can only change by editing this line.
+  # rhysd/actionlint hook because the upstream actionlint-docker hook's entry pins
+  # the image by mutable tag, and `rev:` only pins the hook definition, not
+  # the image it runs. This entry pins the digest, so the ruleset can only change by editing this line.
   #
   # The image bundles shellcheck. actionlint silently skips every run: block
   # and still exits 0 when shellcheck is absent from PATH, which is how the
@@ -188,66 +146,12 @@ repos:
         # installs trivy v0.69.3 via the workflow step in
         # .github/workflows/pre-commit.yml, so PRs are always scanned
         # regardless of a developer's local setup.
-        #
-        # `**/.terraform` is skipped because it is a gitignored, generated
-        # local cache (downloaded provider schemas + cached plan snapshots
-        # from `terraform init`) — never committed and never present in CI
-        # (which checks out from git), so findings there are local-only
-        # false positives on third-party provider cache, not on our source.
-        # The actual terraform module source files are still fully scanned.
-        entry: bash -c 'trivy config --severity HIGH,CRITICAL --exit-code 1 --skip-dirs terraform/environments/aws --skip-dirs "**/.terraform" --skip-dirs .claude .'
+        entry: bash -c 'trivy config --severity HIGH,CRITICAL --exit-code 1 --skip-dirs .claude .'
         language: system
         pass_filenames: false
 
-  # Migration checks
-  - repo: local
-    hooks:
-      - id: check-migration-conflicts
-        name: Check for conflicting migration numbers
-        entry: bash -c 'dups=$(ls internal/database/postgres/migrations/*.up.sql 2>/dev/null | sed "s/.*\///" | cut -c1-6 | sort | uniq -d); if [ -n "$dups" ]; then echo "Duplicate migration number(s) found:"; echo "$dups"; exit 1; fi'
-        language: system
-        pass_filenames: false
-        files: ^internal/database/postgres/migrations/
-
-  # Permissions codegen: regenerate frontend/src/permissions.generated.ts
-  # from internal/auth/types.go and fail if the committed copy is stale.
-  # Triggers on changes to the backend defaults or the generator itself,
-  # plus the generated file (in case a dev hand-edits it).
-  - repo: local
-    hooks:
-      - id: permissions-codegen
-        name: Regenerate frontend permissions from Go defaults
-        entry: bash -c 'go run ./cmd/gen-permissions && git diff --exit-code -- frontend/src/permissions.generated.ts || { echo "permissions.generated.ts is stale. Run go run ./cmd/gen-permissions and commit the result."; exit 1; }'
-        language: system
-        pass_filenames: false
-        files: ^(internal/auth/types\.go|cmd/gen-permissions/.*\.go|frontend/src/permissions\.generated\.ts)$
-
-  # Heavy test execution: pre-push stage only.
-  #
-  # These three hooks rebuild + run the full Go and frontend test suites,
-  # which is ~6-7 min of work and the bulk of the CI pre-commit job's
-  # runtime. They are *redundant in CI* — the same suites are run by
-  # dedicated workflows that PRs and pushes already trigger:
-  #
-  #   - go-test (-short -race ./...)  : ci.yml `unit-tests` runs the same
-  #                                     suite with -race AND an integration
-  #                                     pass with -tags=integration.
-  #   - frontend-build (npm run build): frontend-build.yml runs npm run
-  #                                     typecheck + npm run build on PRs;
-  #                                     frontend-build-sentinel.yml runs
-  #                                     the build on every push to main /
-  #                                     feat/**.
-  #   - frontend-test (jest)          : frontend-build-sentinel.yml runs
-  #                                     `npx jest --no-coverage --silent`
-  #                                     on every push to feat/** (which
-  #                                     fires on every PR-branch update).
-  #
-  # Moving them to the pre-push stage keeps the local safety net (a plain
-  # `pre-commit install` arms pre-push via default_install_hook_types, so
-  # devs still get these tests on `git push`) while letting the CI pre-commit workflow stay
-  # focused on style/security/syntax. Pre-commit's default stage filter
-  # is `pre-commit`, so the CI workflow's `pre-commit run --all-files`
-  # skips these hooks automatically.
+  # Heavy test execution: pre-push stage only. ci.yml `unit-tests` runs the same
+  # suite, so CI's `pre-commit run --all-files` skips it (default stage filter).
   - repo: local
     hooks:
       - id: go-test
@@ -256,22 +160,6 @@ repos:
         language: system
         pass_filenames: false
         files: \.go$
-        stages: [pre-push]
-
-      - id: frontend-build
-        name: Build frontend (pre-push only; CI covers via frontend-build.yml)
-        entry: bash -c 'cd frontend && npm run build'
-        language: system
-        pass_filenames: false
-        files: ^frontend/src/
-        stages: [pre-push]
-
-      - id: frontend-test
-        name: Run frontend tests (pre-push only; CI covers via frontend-build-sentinel.yml)
-        entry: bash -c 'cd frontend && npx jest --no-coverage --silent'
-        language: system
-        pass_filenames: false
-        files: ^frontend/src/
         stages: [pre-push]
 
 # Global configuration

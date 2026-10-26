@@ -85,7 +85,7 @@ type credentialScopeSource struct {
 //     requireCredentialScope exists to remove, in a worse form.
 //
 // So a real GCP purchase must name gcp_project_id. That is a stated contract
-// (documented in mcp/README.md and in the tool's own schema), not an accident
+// (documented in README.md and in the tool's own schema), not an accident
 // of the gate: "whichever project happens to be listed first" is not a
 // defensible default for spending money.
 func credentialScopeSourceFor(p common.ProviderType) (credentialScopeSource, error) {

@@ -43,6 +43,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Security
 
+- Bump Go to 1.26.10 to pick up the fix for GO-2026-6809 (crypto/x509), which `govulncheck` now reports against 1.26.9.
 - A small `CUDLY_MCP_MAX_COUNT` no longer admits an enormous purchase (50 x
   `u-24tb1` is about $286M): the USD cap bounds the real total.
 
@@ -110,6 +111,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed
 
+- The search's dedupe failure suggests the missing IAM permission only when
+  listing existing commitments was refused (AWS `AccessDenied`,
+  `UnauthorizedOperation`; Azure or GCP 401/403). Other listing errors, such as
+  a commitment with an unparseable date, show the underlying error without the
+  permission hint. The search still fails on any listing error.
 - The Claude Desktop settings for `budget_usd` and `max_commitment_usd` now
   use the inclusive min 0 (like the other float caps) instead of 1, so sub-dollar amounts are accepted, matching the server, which accepts any
   positive amount (mcp#82). Tests also pin that a panic or a cancelled context
