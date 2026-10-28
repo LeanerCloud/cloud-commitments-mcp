@@ -76,7 +76,7 @@ type searchRecommendationsResult struct {
 type searchRecommendationsTool struct {
 	// createProvider is a seam over provider.CreateProvider so tests can
 	// inject a fake Provider without resolving real cloud credentials.
-	createProvider func(name string, cfg *provider.ProviderConfig) (provider.Provider, error)
+	createProvider func(name string, cfg *provider.Config) (provider.Provider, error)
 }
 
 // NewSearchRecommendationsTool builds the cudly_search_recommendations tool.
@@ -358,10 +358,10 @@ func validateFilterListEntries(args searchRecommendationsArgs) error {
 	return nil
 }
 
-// providerConfigFromArgs builds the provider.ProviderConfig for the given
+// providerConfigFromArgs builds the provider.Config for the given
 // provider from the tool's per-call credential override fields (design §4).
-func providerConfigFromArgs(providerType common.ProviderType, args searchRecommendationsArgs) *provider.ProviderConfig {
-	return &provider.ProviderConfig{
+func providerConfigFromArgs(providerType common.ProviderType, args searchRecommendationsArgs) *provider.Config {
+	return &provider.Config{
 		Name:                string(providerType),
 		AWSProfile:          args.AWSProfile,
 		AzureSubscriptionID: args.AzureSubscriptionID,

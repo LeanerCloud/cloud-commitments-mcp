@@ -144,71 +144,71 @@ func TestResolveClientTrimsCredentialScope(t *testing.T) {
 	// each case asserts on the one field its ProviderConfig actually sets.
 	cases := []struct {
 		name    string
-		resolve func(createProvider func(string, *provider.ProviderConfig) (provider.Provider, error)) ResolveClientFunc
-		got     func(cfg *provider.ProviderConfig) string
+		resolve func(createProvider func(string, *provider.Config) (provider.Provider, error)) ResolveClientFunc
+		got     func(cfg *provider.Config) string
 		want    string
 	}{
 		{
 			name: "aws ec2",
-			resolve: func(cp func(string, *provider.ProviderConfig) (provider.Provider, error)) ResolveClientFunc {
+			resolve: func(cp func(string, *provider.Config) (provider.Provider, error)) ResolveClientFunc {
 				return (&awsEC2RIPurchaseTool{createProvider: cp}).
 					resolveClient(ec2RIPurchaseArgs{AWSProfile: "  padded-profile  "}, "us-east-1")
 			},
-			got:  func(c *provider.ProviderConfig) string { return c.AWSProfile },
+			got:  func(c *provider.Config) string { return c.AWSProfile },
 			want: "padded-profile",
 		},
 		{
 			name: "aws elasticache",
-			resolve: func(cp func(string, *provider.ProviderConfig) (provider.Provider, error)) ResolveClientFunc {
+			resolve: func(cp func(string, *provider.Config) (provider.Provider, error)) ResolveClientFunc {
 				return (&awsElastiCacheRIPurchaseTool{createProvider: cp}).
 					resolveClient(elasticacheRIPurchaseArgs{AWSProfile: "  padded-profile  "}, "us-east-1")
 			},
-			got:  func(c *provider.ProviderConfig) string { return c.AWSProfile },
+			got:  func(c *provider.Config) string { return c.AWSProfile },
 			want: "padded-profile",
 		},
 		{
 			name: "aws rds",
-			resolve: func(cp func(string, *provider.ProviderConfig) (provider.Provider, error)) ResolveClientFunc {
+			resolve: func(cp func(string, *provider.Config) (provider.Provider, error)) ResolveClientFunc {
 				return (&awsRDSRIPurchaseTool{createProvider: cp}).
 					resolveClient(rdsRIPurchaseArgs{AWSProfile: "  padded-profile  "}, "us-east-1")
 			},
-			got:  func(c *provider.ProviderConfig) string { return c.AWSProfile },
+			got:  func(c *provider.Config) string { return c.AWSProfile },
 			want: "padded-profile",
 		},
 		{
 			name: "aws simple ri",
-			resolve: func(cp func(string, *provider.ProviderConfig) (provider.Provider, error)) ResolveClientFunc {
+			resolve: func(cp func(string, *provider.Config) (provider.Provider, error)) ResolveClientFunc {
 				return (&simpleAWSRIPurchaseTool{createProvider: cp}).
 					resolveClient(simpleAWSRIPurchaseArgs{AWSProfile: "  padded-profile  "}, "us-east-1")
 			},
-			got:  func(c *provider.ProviderConfig) string { return c.AWSProfile },
+			got:  func(c *provider.Config) string { return c.AWSProfile },
 			want: "padded-profile",
 		},
 		{
 			name: "aws savings plans",
-			resolve: func(cp func(string, *provider.ProviderConfig) (provider.Provider, error)) ResolveClientFunc {
+			resolve: func(cp func(string, *provider.Config) (provider.Provider, error)) ResolveClientFunc {
 				return (&awsSavingsPlansPurchaseTool{createProvider: cp}).
 					resolveClient(savingsPlansPurchaseArgs{AWSProfile: "  padded-profile  "}, "us-east-1", common.ServiceSavingsPlansCompute)
 			},
-			got:  func(c *provider.ProviderConfig) string { return c.AWSProfile },
+			got:  func(c *provider.Config) string { return c.AWSProfile },
 			want: "padded-profile",
 		},
 		{
 			name: "azure compute",
-			resolve: func(cp func(string, *provider.ProviderConfig) (provider.Provider, error)) ResolveClientFunc {
+			resolve: func(cp func(string, *provider.Config) (provider.Provider, error)) ResolveClientFunc {
 				return (&azureComputeRIPurchaseTool{createProvider: cp}).
 					resolveClient(azureComputeRIPurchaseArgs{AzureSubscriptionID: "  sub-x  "}, "eastus")
 			},
-			got:  func(c *provider.ProviderConfig) string { return c.AzureSubscriptionID },
+			got:  func(c *provider.Config) string { return c.AzureSubscriptionID },
 			want: "sub-x",
 		},
 		{
 			name: "gcp compute engine",
-			resolve: func(cp func(string, *provider.ProviderConfig) (provider.Provider, error)) ResolveClientFunc {
+			resolve: func(cp func(string, *provider.Config) (provider.Provider, error)) ResolveClientFunc {
 				return (&gcpComputeEngineCUDPurchaseTool{createProvider: cp}).
 					resolveClient(gcpComputeEngineCUDPurchaseArgs{GCPProjectID: "  proj-a  "}, "us-central1")
 			},
-			got:  func(c *provider.ProviderConfig) string { return c.GCPProjectID },
+			got:  func(c *provider.Config) string { return c.GCPProjectID },
 			want: "proj-a",
 		},
 	}
@@ -216,11 +216,11 @@ func TestResolveClientTrimsCredentialScope(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			var gotCfg *provider.ProviderConfig
+			var gotCfg *provider.Config
 			// The factory returns an error so the closure stops right after
 			// building the config: this asserts on what would have been used
 			// to authenticate, without needing a live provider.
-			resolve := tc.resolve(func(_ string, cfg *provider.ProviderConfig) (provider.Provider, error) {
+			resolve := tc.resolve(func(_ string, cfg *provider.Config) (provider.Provider, error) {
 				gotCfg = cfg
 				return nil, assert.AnError
 			})
@@ -245,9 +245,9 @@ func azurePurchaseIdentity(t *testing.T, subscriptionID string) (token, cfgSubsc
 	t.Helper()
 
 	fake := &fakeServiceClient{purchaseResult: common.PurchaseResult{Success: true}}
-	var gotCfg *provider.ProviderConfig
+	var gotCfg *provider.Config
 	tool := &azureComputeRIPurchaseTool{
-		createProvider: func(_ string, cfg *provider.ProviderConfig) (provider.Provider, error) {
+		createProvider: func(_ string, cfg *provider.Config) (provider.Provider, error) {
 			gotCfg = cfg
 			return &recordingProvider{
 				fakeProvider: &fakeProvider{name: "azure"},
@@ -329,9 +329,9 @@ func TestAWSProfileCaseIsPreserved(t *testing.T) {
 
 	purchaseAs := func(profile string) (token, cfgProfile string) {
 		fake := &fakeServiceClient{purchaseResult: common.PurchaseResult{Success: true}}
-		var gotCfg *provider.ProviderConfig
+		var gotCfg *provider.Config
 		tool := &awsEC2RIPurchaseTool{
-			createProvider: func(_ string, cfg *provider.ProviderConfig) (provider.Provider, error) {
+			createProvider: func(_ string, cfg *provider.Config) (provider.Provider, error) {
 				gotCfg = cfg
 				return &recordingProvider{
 					fakeProvider: &fakeProvider{name: "aws"},

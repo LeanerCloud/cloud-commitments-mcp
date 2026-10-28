@@ -135,7 +135,7 @@ func TestSearchBlankFilterListEntriesRejected(t *testing.T) {
 			tc.mutate(&args)
 
 			tool := &searchRecommendationsTool{
-				createProvider: func(_ string, _ *provider.ProviderConfig) (provider.Provider, error) {
+				createProvider: func(_ string, _ *provider.Config) (provider.Provider, error) {
 					t.Fatal("provider must not be created for malformed filter input")
 					return nil, nil
 				},

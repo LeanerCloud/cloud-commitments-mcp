@@ -161,7 +161,7 @@ func TestAzureComputeRIPurchaseHandleConfirmFalseRefuses(t *testing.T) {
 	t.Parallel()
 	resolveCalled := false
 	tool := &azureComputeRIPurchaseTool{
-		createProvider: func(_ string, _ *provider.ProviderConfig) (provider.Provider, error) {
+		createProvider: func(_ string, _ *provider.Config) (provider.Provider, error) {
 			resolveCalled = true
 			return nil, nil
 		},
@@ -183,7 +183,7 @@ func TestAzureComputeRIPurchaseHandleDryRunAcceptsNoUpfront(t *testing.T) {
 	t.Parallel()
 	resolveCalled := false
 	tool := &azureComputeRIPurchaseTool{
-		createProvider: func(_ string, _ *provider.ProviderConfig) (provider.Provider, error) {
+		createProvider: func(_ string, _ *provider.Config) (provider.Provider, error) {
 			resolveCalled = true
 			return nil, nil
 		},
@@ -205,7 +205,7 @@ func TestAzureComputeRIPurchaseHandleRealPurchaseRejectsPartialUpfront(t *testin
 	t.Parallel()
 	resolveCalled := false
 	tool := &azureComputeRIPurchaseTool{
-		createProvider: func(_ string, _ *provider.ProviderConfig) (provider.Provider, error) {
+		createProvider: func(_ string, _ *provider.Config) (provider.Provider, error) {
 			resolveCalled = true
 			return nil, nil
 		},
@@ -229,7 +229,7 @@ func TestAzureComputeRIPurchaseHandleRealPurchaseNoUpfront(t *testing.T) {
 	t.Parallel()
 	fake := &fakeServiceClient{purchaseResult: common.PurchaseResult{Success: true, CommitmentID: "azure-res-monthly"}}
 	tool := &azureComputeRIPurchaseTool{
-		createProvider: func(_ string, _ *provider.ProviderConfig) (provider.Provider, error) {
+		createProvider: func(_ string, _ *provider.Config) (provider.Provider, error) {
 			return &recordingProvider{
 				fakeProvider: &fakeProvider{name: "azure"},
 				client:       fake,
@@ -256,7 +256,7 @@ func TestAzureComputeRIPurchaseHandleOmittedPaymentOptionDefaultsToNoUpfront(t *
 	t.Parallel()
 	fake := &fakeServiceClient{purchaseResult: common.PurchaseResult{Success: true, CommitmentID: "azure-res-default"}}
 	tool := &azureComputeRIPurchaseTool{
-		createProvider: func(_ string, _ *provider.ProviderConfig) (provider.Provider, error) {
+		createProvider: func(_ string, _ *provider.Config) (provider.Provider, error) {
 			return &recordingProvider{
 				fakeProvider: &fakeProvider{name: "azure"},
 				client:       fake,
@@ -280,7 +280,7 @@ func TestAzureComputeRIPurchaseHandleDryRunNeverCallsProvider(t *testing.T) {
 	t.Parallel()
 	resolveCalled := false
 	tool := &azureComputeRIPurchaseTool{
-		createProvider: func(_ string, _ *provider.ProviderConfig) (provider.Provider, error) {
+		createProvider: func(_ string, _ *provider.Config) (provider.Provider, error) {
 			resolveCalled = true
 			return nil, nil
 		},
@@ -299,7 +299,7 @@ func TestAzureComputeRIPurchaseHandleRealPurchase(t *testing.T) {
 	fake := &fakeServiceClient{purchaseResult: common.PurchaseResult{Success: true, CommitmentID: "azure-res-1"}}
 	var gotService common.ServiceType
 	tool := &azureComputeRIPurchaseTool{
-		createProvider: func(_ string, _ *provider.ProviderConfig) (provider.Provider, error) {
+		createProvider: func(_ string, _ *provider.Config) (provider.Provider, error) {
 			return &recordingProvider{
 				fakeProvider: &fakeProvider{name: "azure"},
 				client:       fake,

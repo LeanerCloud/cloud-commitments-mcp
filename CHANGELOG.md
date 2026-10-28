@@ -7,6 +7,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- `cudly_aws_ec2_ri_purchase`: a `partial-upfront` or `all-upfront` dry run
+  looks up the offering (read-only) and returns its total upfront as
+  `approved_upfront` and `approved_currency`. The confirming call must pass
+  both back; it is refused without them, and the purchase is refused when the
+  offering's upfront exceeds `approved_upfront` by more than 5% (go#611).
+  `no-upfront` purchases are unchanged. Real upfront EC2 audit records now carry
+  the approved upfront in `estimated_cost`.
 - Every real purchase passes `PurchaseOptions.RequestedAt`, the first-dispatch
   time of its idempotency key, recorded before the provider call and reused on
   retries (go#515: Redshift finds an earlier purchase by start time). With
@@ -58,6 +65,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Bumped the `cloud-commitments-go` pins to 8785de4 for the EC2 approved-upfront
+  guard (go#611). `provider.ProviderConfig` is now a deprecated alias of
+  `provider.Config`; the call sites use `provider.Config`. Behavior pulled in:
+  RDS, MemoryDB, OpenSearch and Redshift purchases gain the same guard, which
+  stays inactive for MCP purchases because those tools set no approved upfront;
+  Azure reservation and savings plan purchases check the billing currency
+  (an empty recommendation currency means USD).
 - Bumped the `cloud-commitments-go` pins to 1ce87bd. `computeengine.NewClient` no
   longer takes a context (go#575); the GCP test call sites follow. Behavior
   pulled in: Savings Plans in aws-cn are refused before any AWS call (go#566);

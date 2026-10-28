@@ -51,7 +51,7 @@ type azureComputeRIPurchaseArgs struct {
 }
 
 type azureComputeRIPurchaseTool struct {
-	createProvider func(name string, cfg *provider.ProviderConfig) (provider.Provider, error)
+	createProvider func(name string, cfg *provider.Config) (provider.Provider, error)
 }
 
 // NewAzureComputeRIPurchaseTool builds the cudly_azure_compute_ri_purchase tool.
@@ -229,7 +229,7 @@ func azureComputeRecommendationFromArgs(args azureComputeRIPurchaseArgs) (rec co
 // lower-casing it does not change which subscription is addressed.
 func (t *azureComputeRIPurchaseTool) resolveClient(args azureComputeRIPurchaseArgs, region string) ResolveClientFunc {
 	return func(ctx context.Context) (provider.ServiceClient, error) {
-		cfg := &provider.ProviderConfig{Name: string(common.ProviderAzure), AzureSubscriptionID: azureCredentialScope(args.AzureSubscriptionID), Region: region}
+		cfg := &provider.Config{Name: string(common.ProviderAzure), AzureSubscriptionID: azureCredentialScope(args.AzureSubscriptionID), Region: region}
 		prov, err := t.createProvider(string(common.ProviderAzure), cfg)
 		if err != nil {
 			return nil, err

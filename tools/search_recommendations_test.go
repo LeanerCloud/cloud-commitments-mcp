@@ -104,7 +104,7 @@ var _ provider.Provider = (*fakeProvider)(nil)
 
 func newTestSearchTool(fp *fakeProvider) *searchRecommendationsTool {
 	return &searchRecommendationsTool{
-		createProvider: func(_ string, _ *provider.ProviderConfig) (provider.Provider, error) {
+		createProvider: func(_ string, _ *provider.Config) (provider.Provider, error) {
 			return fp, nil
 		},
 	}
@@ -177,9 +177,9 @@ func TestSearchRecommendationsTrimsRegionFilters(t *testing.T) {
 	t.Parallel()
 	client := &fakeRecommendationsClient{}
 	fp := &fakeProvider{name: "aws", services: []common.ServiceType{common.ServiceEC2}, recClient: client}
-	var gotCfg *provider.ProviderConfig
+	var gotCfg *provider.Config
 	tool := &searchRecommendationsTool{
-		createProvider: func(_ string, cfg *provider.ProviderConfig) (provider.Provider, error) {
+		createProvider: func(_ string, cfg *provider.Config) (provider.Provider, error) {
 			gotCfg = cfg
 			return fp, nil
 		},
@@ -216,7 +216,7 @@ func TestSearchRecommendationsTrimsCredentialOverrides(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
-		got      func(cfg *provider.ProviderConfig) string
+		got      func(cfg *provider.Config) string
 		name     string
 		provider string
 		service  common.ServiceType
@@ -228,7 +228,7 @@ func TestSearchRecommendationsTrimsCredentialOverrides(t *testing.T) {
 			provider: "aws",
 			service:  common.ServiceEC2,
 			args:     searchRecommendationsArgs{Provider: "aws", Service: "ec2", AWSProfile: "  my-profile  "},
-			got:      func(c *provider.ProviderConfig) string { return c.AWSProfile },
+			got:      func(c *provider.Config) string { return c.AWSProfile },
 			want:     "my-profile",
 		},
 		{
@@ -236,7 +236,7 @@ func TestSearchRecommendationsTrimsCredentialOverrides(t *testing.T) {
 			provider: "azure",
 			service:  common.ServiceCompute,
 			args:     searchRecommendationsArgs{Provider: "azure", Service: "compute", AzureSubscriptionID: "  sub-x  "},
-			got:      func(c *provider.ProviderConfig) string { return c.AzureSubscriptionID },
+			got:      func(c *provider.Config) string { return c.AzureSubscriptionID },
 			want:     "sub-x",
 		},
 		{
@@ -244,7 +244,7 @@ func TestSearchRecommendationsTrimsCredentialOverrides(t *testing.T) {
 			provider: "gcp",
 			service:  common.ServiceCompute,
 			args:     searchRecommendationsArgs{Provider: "gcp", Service: "compute", GCPProjectID: "  proj-a  "},
-			got:      func(c *provider.ProviderConfig) string { return c.GCPProjectID },
+			got:      func(c *provider.Config) string { return c.GCPProjectID },
 			want:     "proj-a",
 		},
 	}
@@ -254,9 +254,9 @@ func TestSearchRecommendationsTrimsCredentialOverrides(t *testing.T) {
 			t.Parallel()
 			client := &fakeRecommendationsClient{}
 			fp := &fakeProvider{name: tc.provider, services: []common.ServiceType{tc.service}, recClient: client}
-			var gotCfg *provider.ProviderConfig
+			var gotCfg *provider.Config
 			tool := &searchRecommendationsTool{
-				createProvider: func(_ string, cfg *provider.ProviderConfig) (provider.Provider, error) {
+				createProvider: func(_ string, cfg *provider.Config) (provider.Provider, error) {
 					gotCfg = cfg
 					return fp, nil
 				},
@@ -274,7 +274,7 @@ func TestSearchRecommendationsTrimsCredentialOverrides(t *testing.T) {
 func TestSearchRecommendationsProviderErrorSurfaced(t *testing.T) {
 	t.Parallel()
 	tool := &searchRecommendationsTool{
-		createProvider: func(_ string, _ *provider.ProviderConfig) (provider.Provider, error) {
+		createProvider: func(_ string, _ *provider.Config) (provider.Provider, error) {
 			return nil, errors.New("no AWS credentials found")
 		},
 	}
@@ -394,7 +394,7 @@ func TestSearchAcceptsWhitespacePaddedService(t *testing.T) {
 
 	recClient := &fakeRecommendationsClient{}
 	tool := &searchRecommendationsTool{
-		createProvider: func(_ string, _ *provider.ProviderConfig) (provider.Provider, error) {
+		createProvider: func(_ string, _ *provider.Config) (provider.Provider, error) {
 			return &fakeProvider{
 				name:      "aws",
 				services:  []common.ServiceType{common.ServiceEC2},

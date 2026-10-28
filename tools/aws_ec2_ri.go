@@ -20,10 +20,14 @@ var awsEC2RIPurchaseAnnotations = purchaseAnnotations(awsEC2RIPurchaseTitle)
 
 const awsEC2RIPurchaseDescription = "Purchase AWS EC2 Reserved Instances. THIS SPENDS REAL MONEY when " +
 	"dry_run=false and confirm=true. Always call with dry_run=true first (the default) to validate your " +
-	"parameters before committing; a dry_run response never contacts AWS and never spends money. Search first " +
+	"parameters before committing; a dry_run response never spends money. Search first " +
 	"with cudly_search_recommendations to find a region/instance_type/count worth reserving. offering_class " +
 	"(standard or convertible, default convertible) sets the RI type: standard is typically cheaper but " +
-	"cannot be exchanged; it is echoed in the preview, so check it before buying."
+	"cannot be exchanged; it is echoed in the preview, so check it before buying. For partial-upfront and " +
+	"all-upfront, the dry run looks up the offering in AWS (read-only, needs credentials) and returns its total " +
+	"upfront as approved_upfront and approved_currency; the confirming call (dry_run=false, confirm=true) must " +
+	"pass both back unchanged, and is refused without them or when the offering's upfront has risen more than 5% " +
+	"above approved_upfront. No-upfront purchases take neither field, and their dry run never contacts AWS."
 
 // ec2RIPurchaseArgs is the input schema for cudly_aws_ec2_ri_purchase. term
 // and payment_option map onto common.Recommendation.Term/PaymentOption;
@@ -33,23 +37,26 @@ const awsEC2RIPurchaseDescription = "Purchase AWS EC2 Reserved Instances. THIS S
 // (on-demand Linux, shared tenancy, region-scoped) but are always visible in
 // the schema and can be overridden per call.
 type ec2RIPurchaseArgs struct {
-	DryRun           *bool  `json:"dry_run,omitempty" jsonschema:"preview only, no purchase; defaults to true"`
-	Confirm          *bool  `json:"confirm,omitempty" jsonschema:"required (with dry_run=false) to execute a real purchase; defaults to false"`
-	Region           string `json:"region" jsonschema:"AWS region, e.g. us-east-1"`
-	InstanceType     string `json:"instance_type" jsonschema:"EC2 instance type, e.g. m5.large"`
-	PaymentOption    string `json:"payment_option" jsonschema:"payment schedule"`
-	Platform         string `json:"platform,omitempty" jsonschema:"RI product description (operating system); defaults to Linux/UNIX"`
-	Tenancy          string `json:"tenancy,omitempty" jsonschema:"instance tenancy; defaults to default (shared)"`
-	Scope            string `json:"scope,omitempty" jsonschema:"region or availability-zone; defaults to region"`
-	OfferingClass    string `json:"offering_class,omitempty" jsonschema:"standard (locked, typically cheaper) or convertible (exchangeable); defaults to convertible"`
-	AWSProfile       string `json:"aws_profile,omitempty" jsonschema:"AWS named profile override (~/.aws/config); default uses ambient credentials"`
-	IdempotencyNonce string `json:"idempotency_nonce,omitempty" jsonschema:"optional; set to a fresh value to authorize a purchase that is otherwise identical to a previous one (e.g. buy 3 more RIs with the same parameters); leave empty (the default) so retries with identical parameters dedupe and never double-buy"`
-	Count            int    `json:"count" jsonschema:"number of instances to reserve, must be > 0; real purchases are capped by the operator (CUDLY_MCP_MAX_COUNT)"`
-	TermYears        int    `json:"term_years" jsonschema:"commitment length in years"`
+	DryRun  *bool `json:"dry_run,omitempty" jsonschema:"preview only, no purchase; defaults to true"`
+	Confirm *bool `json:"confirm,omitempty" jsonschema:"required (with dry_run=false) to execute a real purchase; defaults to false"`
+	// ApprovedUpfront is a pointer so an omitted figure is told apart from 0.
+	ApprovedUpfront  *float64 `json:"approved_upfront,omitempty" jsonschema:"partial-upfront and all-upfront only: copy approved_upfront (total USD upfront for count instances) from the dry run's response; required on the confirming call, which is refused if the offering's upfront exceeds it by more than 5%"`
+	Region           string   `json:"region" jsonschema:"AWS region, e.g. us-east-1"`
+	InstanceType     string   `json:"instance_type" jsonschema:"EC2 instance type, e.g. m5.large"`
+	PaymentOption    string   `json:"payment_option" jsonschema:"payment schedule"`
+	Platform         string   `json:"platform,omitempty" jsonschema:"RI product description (operating system); defaults to Linux/UNIX"`
+	Tenancy          string   `json:"tenancy,omitempty" jsonschema:"instance tenancy; defaults to default (shared)"`
+	Scope            string   `json:"scope,omitempty" jsonschema:"region or availability-zone; defaults to region"`
+	OfferingClass    string   `json:"offering_class,omitempty" jsonschema:"standard (locked, typically cheaper) or convertible (exchangeable); defaults to convertible"`
+	AWSProfile       string   `json:"aws_profile,omitempty" jsonschema:"AWS named profile override (~/.aws/config); default uses ambient credentials"`
+	IdempotencyNonce string   `json:"idempotency_nonce,omitempty" jsonschema:"optional; set to a fresh value to authorize a purchase that is otherwise identical to a previous one (e.g. buy 3 more RIs with the same parameters); leave empty (the default) so retries with identical parameters dedupe and never double-buy"`
+	ApprovedCurrency string   `json:"approved_currency,omitempty" jsonschema:"partial-upfront and all-upfront only: copy approved_currency from the dry run's response; required with approved_upfront on the confirming call"`
+	Count            int      `json:"count" jsonschema:"number of instances to reserve, must be > 0; real purchases are capped by the operator (CUDLY_MCP_MAX_COUNT)"`
+	TermYears        int      `json:"term_years" jsonschema:"commitment length in years"`
 }
 
 type awsEC2RIPurchaseTool struct {
-	createProvider func(name string, cfg *provider.ProviderConfig) (provider.Provider, error)
+	createProvider func(name string, cfg *provider.Config) (provider.Provider, error)
 }
 
 // NewAWSEC2RIPurchaseTool builds the cudly_aws_ec2_ri_purchase tool.
@@ -75,13 +82,14 @@ func (t *awsEC2RIPurchaseTool) Descriptor() Descriptor {
 
 func (t *awsEC2RIPurchaseTool) Register(s *mcp.Server) error {
 	schema, err := BuildInputSchema[ec2RIPurchaseArgs](map[string]FieldOverride{
-		"term_years":     {Enum: []any{int(TermOneYear), int(TermThreeYear)}},
-		"payment_option": {Enum: []any{string(PaymentOptionAllUpfront), string(PaymentOptionPartialUpfront), string(PaymentOptionNoUpfront)}},
-		"scope":          {Enum: []any{string(ScopeRegion), string(ScopeAvailabilityZone)}, Default: string(ScopeRegion)},
-		"offering_class": {Enum: []any{string(OfferingClassStandard), string(OfferingClassConvertible)}, Default: string(OfferingClassConvertible)},
-		"tenancy":        {Enum: []any{string(TenancyDefault), string(TenancyDedicated)}, Default: string(TenancyDefault)},
-		"dry_run":        {Default: true},
-		"confirm":        {Default: false},
+		"term_years":        {Enum: []any{int(TermOneYear), int(TermThreeYear)}},
+		"payment_option":    {Enum: []any{string(PaymentOptionAllUpfront), string(PaymentOptionPartialUpfront), string(PaymentOptionNoUpfront)}},
+		"scope":             {Enum: []any{string(ScopeRegion), string(ScopeAvailabilityZone)}, Default: string(ScopeRegion)},
+		"offering_class":    {Enum: []any{string(OfferingClassStandard), string(OfferingClassConvertible)}, Default: string(OfferingClassConvertible)},
+		"tenancy":           {Enum: []any{string(TenancyDefault), string(TenancyDedicated)}, Default: string(TenancyDefault)},
+		"approved_currency": {Enum: []any{ec2ApprovedCurrency}},
+		"dry_run":           {Default: true},
+		"confirm":           {Default: false},
 	})
 	if err != nil {
 		return err
@@ -104,6 +112,16 @@ func (t *awsEC2RIPurchaseTool) handle(ctx context.Context, _ *mcp.CallToolReques
 	if err != nil {
 		return nil, PurchaseResponse{}, err
 	}
+	// A confirmed upfront purchase carries the dry run's figure into
+	// rec.CommitmentCost so the provider's go#611 price guard runs.
+	err = applyApprovedUpfront(&rec, args, !dryRun && confirm)
+	if err != nil {
+		return nil, PurchaseResponse{}, err
+	}
+	quote, err := t.previewUpfront(ctx, args, region, rec, string(offeringClass), dryRun)
+	if err != nil {
+		return nil, PurchaseResponse{}, err
+	}
 	// The audit record has no offering-class field, so record it in the raw
 	// request payload alongside the other purchase parameters.
 	if rec.RawRecommendation, err = json.Marshal(map[string]string{"offering_class": string(offeringClass)}); err != nil {
@@ -122,6 +140,10 @@ func (t *awsEC2RIPurchaseTool) handle(ctx context.Context, _ *mcp.CallToolReques
 	})
 	if err != nil {
 		return nil, PurchaseResponse{}, err
+	}
+	if quote != nil {
+		resp.ApprovedUpfront = &quote.total
+		resp.ApprovedCurrency = quote.currency
 	}
 	return nil, *resp, nil
 }
@@ -230,7 +252,7 @@ func ec2RecommendationFromArgs(args ec2RIPurchaseArgs) (rec common.Recommendatio
 // resolves the provider/service client against a raw, un-trimmed value.
 func (t *awsEC2RIPurchaseTool) resolveClient(args ec2RIPurchaseArgs, region string) ResolveClientFunc {
 	return func(ctx context.Context) (provider.ServiceClient, error) {
-		cfg := &provider.ProviderConfig{Name: string(common.ProviderAWS), AWSProfile: CredentialScope(args.AWSProfile), Region: region}
+		cfg := &provider.Config{Name: string(common.ProviderAWS), AWSProfile: CredentialScope(args.AWSProfile), Region: region}
 		prov, err := t.createProvider(string(common.ProviderAWS), cfg)
 		if err != nil {
 			return nil, err

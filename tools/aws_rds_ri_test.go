@@ -97,7 +97,7 @@ func TestAWSRDSRIPurchaseHandleConfirmFalseRefuses(t *testing.T) {
 	t.Parallel()
 	resolveCalled := false
 	tool := &awsRDSRIPurchaseTool{
-		createProvider: func(_ string, _ *provider.ProviderConfig) (provider.Provider, error) {
+		createProvider: func(_ string, _ *provider.Config) (provider.Provider, error) {
 			resolveCalled = true
 			return nil, nil
 		},
@@ -116,7 +116,7 @@ func TestAWSRDSRIPurchaseHandleDryRunNeverCallsProvider(t *testing.T) {
 	t.Parallel()
 	resolveCalled := false
 	tool := &awsRDSRIPurchaseTool{
-		createProvider: func(_ string, _ *provider.ProviderConfig) (provider.Provider, error) {
+		createProvider: func(_ string, _ *provider.Config) (provider.Provider, error) {
 			resolveCalled = true
 			return nil, nil
 		},
@@ -135,7 +135,7 @@ func TestAWSRDSRIPurchaseHandleRealPurchase(t *testing.T) {
 	fake := &fakeServiceClient{purchaseResult: common.PurchaseResult{Success: true, CommitmentID: "rds-ri-1"}}
 	var gotService common.ServiceType
 	tool := &awsRDSRIPurchaseTool{
-		createProvider: func(_ string, _ *provider.ProviderConfig) (provider.Provider, error) {
+		createProvider: func(_ string, _ *provider.Config) (provider.Provider, error) {
 			return &recordingProvider{
 				fakeProvider: &fakeProvider{name: "aws"},
 				client:       fake,

@@ -85,12 +85,12 @@ func (fakeSearchAWSProvider) GetRecommendationsClient(_ context.Context) (provid
 // the SDK's output-schema validation.
 func TestSearchSuppressesCoveredRecommendationOverTheProtocol(t *testing.T) {
 	provider.GetRegistry().Unregister("aws")
-	require.NoError(t, provider.RegisterProvider("aws", func(_ *provider.ProviderConfig) (provider.Provider, error) {
+	require.NoError(t, provider.RegisterProvider("aws", func(_ *provider.Config) (provider.Provider, error) {
 		return fakeSearchAWSProvider{}, nil
 	}))
 	t.Cleanup(func() {
 		provider.GetRegistry().Unregister("aws")
-		if err := provider.RegisterProvider("aws", func(cfg *provider.ProviderConfig) (provider.Provider, error) {
+		if err := provider.RegisterProvider("aws", func(cfg *provider.Config) (provider.Provider, error) {
 			return awsprovider.NewAWSProvider(cfg)
 		}); err != nil {
 			t.Errorf("restore real aws provider factory: %v", err)

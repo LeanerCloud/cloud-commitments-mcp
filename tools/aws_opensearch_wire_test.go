@@ -178,7 +178,7 @@ func TestOpenSearchRIPurchaseWireEncoding(t *testing.T) {
 	tool := NewAWSOpenSearchRIPurchaseTool().(*simpleAWSRIPurchaseTool)
 	var gotService common.ServiceType
 	var gotRegion string
-	tool.createProvider = func(_ string, cfg *provider.ProviderConfig) (provider.Provider, error) {
+	tool.createProvider = func(_ string, cfg *provider.Config) (provider.Provider, error) {
 		return &recordingProvider{
 			fakeProvider: &fakeProvider{name: "aws"},
 			client:       awsprovider.NewOpenSearchClient(srv.awsConfig(cfg.Region)),

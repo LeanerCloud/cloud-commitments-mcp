@@ -58,7 +58,7 @@ func (f *fakeRDSAPI) DescribeReservedDBInstances(_ context.Context, _ *awsrds.De
 
 // rdsToolWithFake wires the RDS tool to a real rds.Client over fake.
 func rdsToolWithFake(fake *fakeRDSAPI) *awsRDSRIPurchaseTool {
-	return &awsRDSRIPurchaseTool{createProvider: func(string, *provider.ProviderConfig) (provider.Provider, error) {
+	return &awsRDSRIPurchaseTool{createProvider: func(string, *provider.Config) (provider.Provider, error) {
 		return rdsFakeProvider{client: fake}, nil
 	}}
 }

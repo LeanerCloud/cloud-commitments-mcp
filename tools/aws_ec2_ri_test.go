@@ -126,7 +126,7 @@ func TestAWSEC2RIPurchaseHandleConfirmFalseRefuses(t *testing.T) {
 	t.Parallel()
 	resolveCalled := false
 	tool := &awsEC2RIPurchaseTool{
-		createProvider: func(_ string, _ *provider.ProviderConfig) (provider.Provider, error) {
+		createProvider: func(_ string, _ *provider.Config) (provider.Provider, error) {
 			resolveCalled = true
 			return nil, nil
 		},
@@ -147,7 +147,7 @@ func TestAWSEC2RIPurchaseHandleDryRunNeverCallsProvider(t *testing.T) {
 	t.Parallel()
 	resolveCalled := false
 	tool := &awsEC2RIPurchaseTool{
-		createProvider: func(_ string, _ *provider.ProviderConfig) (provider.Provider, error) {
+		createProvider: func(_ string, _ *provider.Config) (provider.Provider, error) {
 			resolveCalled = true
 			return nil, nil
 		},
@@ -168,7 +168,7 @@ func TestAWSEC2RIPurchaseHandleInvalidArgsNeverCallsProvider(t *testing.T) {
 	t.Parallel()
 	resolveCalled := false
 	tool := &awsEC2RIPurchaseTool{
-		createProvider: func(_ string, _ *provider.ProviderConfig) (provider.Provider, error) {
+		createProvider: func(_ string, _ *provider.Config) (provider.Provider, error) {
 			resolveCalled = true
 			return nil, nil
 		},
@@ -194,7 +194,7 @@ func TestAWSEC2RIPurchaseHandleRealPurchaseResolvesEC2Client(t *testing.T) {
 		name: "aws",
 	}
 	tool := &awsEC2RIPurchaseTool{
-		createProvider: func(_ string, _ *provider.ProviderConfig) (provider.Provider, error) {
+		createProvider: func(_ string, _ *provider.Config) (provider.Provider, error) {
 			return &recordingProvider{fakeProvider: fp, client: fake, gotService: &gotService, gotRegion: &gotRegion}, nil
 		},
 	}
@@ -230,7 +230,7 @@ func TestAWSEC2RIPurchaseCostJSON(t *testing.T) {
 			var gotService common.ServiceType
 			var gotRegion string
 			tool := &awsEC2RIPurchaseTool{
-				createProvider: func(_ string, _ *provider.ProviderConfig) (provider.Provider, error) {
+				createProvider: func(_ string, _ *provider.Config) (provider.Provider, error) {
 					return &recordingProvider{
 						fakeProvider: &fakeProvider{name: "aws"}, client: fake,
 						gotService: &gotService, gotRegion: &gotRegion,
@@ -331,7 +331,7 @@ func TestAWSEC2RIPurchaseOfferingClassPassThrough(t *testing.T) {
 			var gotService common.ServiceType
 			var gotRegion string
 			tool := &awsEC2RIPurchaseTool{
-				createProvider: func(_ string, _ *provider.ProviderConfig) (provider.Provider, error) {
+				createProvider: func(_ string, _ *provider.Config) (provider.Provider, error) {
 					return &recordingProvider{fakeProvider: &fakeProvider{name: "aws"}, client: fake, gotService: &gotService, gotRegion: &gotRegion}, nil
 				},
 			}
@@ -349,7 +349,7 @@ func TestAWSEC2RIPurchaseOfferingClassPassThrough(t *testing.T) {
 
 func TestAWSEC2RIPurchasePreviewShowsOfferingClass(t *testing.T) {
 	t.Parallel()
-	tool := &awsEC2RIPurchaseTool{createProvider: func(string, *provider.ProviderConfig) (provider.Provider, error) {
+	tool := &awsEC2RIPurchaseTool{createProvider: func(string, *provider.Config) (provider.Provider, error) {
 		t.Fatal("dry run must not resolve a provider")
 		return nil, nil
 	}}
@@ -363,7 +363,7 @@ func TestAWSEC2RIPurchasePreviewShowsOfferingClass(t *testing.T) {
 
 func TestAWSEC2RIPurchaseRejectsUnknownOfferingClass(t *testing.T) {
 	t.Parallel()
-	tool := &awsEC2RIPurchaseTool{createProvider: func(string, *provider.ProviderConfig) (provider.Provider, error) {
+	tool := &awsEC2RIPurchaseTool{createProvider: func(string, *provider.Config) (provider.Provider, error) {
 		t.Fatal("invalid args must not resolve a provider")
 		return nil, nil
 	}}
@@ -402,7 +402,7 @@ func TestIdempotencyKeyGoldenCompatibility(t *testing.T) {
 
 func TestAWSEC2RIPurchaseRejectsWrongCaseOfferingClass(t *testing.T) {
 	t.Parallel()
-	tool := &awsEC2RIPurchaseTool{createProvider: func(string, *provider.ProviderConfig) (provider.Provider, error) {
+	tool := &awsEC2RIPurchaseTool{createProvider: func(string, *provider.Config) (provider.Provider, error) {
 		t.Fatal("wrong-case offering_class must be rejected before any provider call")
 		return nil, nil
 	}}
@@ -423,7 +423,7 @@ func TestAWSEC2RIPurchaseAuditRecordCarriesOfferingClass(t *testing.T) {
 	var gotService common.ServiceType
 	var gotRegion string
 	tool := &awsEC2RIPurchaseTool{
-		createProvider: func(_ string, _ *provider.ProviderConfig) (provider.Provider, error) {
+		createProvider: func(_ string, _ *provider.Config) (provider.Provider, error) {
 			return &recordingProvider{fakeProvider: &fakeProvider{name: "aws"}, client: fake, gotService: &gotService, gotRegion: &gotRegion}, nil
 		},
 	}

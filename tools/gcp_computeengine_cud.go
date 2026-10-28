@@ -48,7 +48,7 @@ type gcpComputeEngineCUDPurchaseArgs struct {
 }
 
 type gcpComputeEngineCUDPurchaseTool struct {
-	createProvider func(name string, cfg *provider.ProviderConfig) (provider.Provider, error)
+	createProvider func(name string, cfg *provider.Config) (provider.Provider, error)
 }
 
 // NewGCPComputeEngineCUDPurchaseTool builds the cudly_gcp_computeengine_cud_purchase tool.
@@ -196,7 +196,7 @@ func gcpComputeEngineRecommendationFromArgs(args gcpComputeEngineCUDPurchaseArgs
 // client against a raw, un-trimmed value.
 func (t *gcpComputeEngineCUDPurchaseTool) resolveClient(args gcpComputeEngineCUDPurchaseArgs, region string) ResolveClientFunc {
 	return func(ctx context.Context) (provider.ServiceClient, error) {
-		cfg := &provider.ProviderConfig{Name: string(common.ProviderGCP), GCPProjectID: CredentialScope(args.GCPProjectID), Region: region}
+		cfg := &provider.Config{Name: string(common.ProviderGCP), GCPProjectID: CredentialScope(args.GCPProjectID), Region: region}
 		prov, err := t.createProvider(string(common.ProviderGCP), cfg)
 		if err != nil {
 			return nil, err

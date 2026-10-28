@@ -145,7 +145,7 @@ func TestSimpleAWSRIPurchaseHandleConfirmFalseRefuses(t *testing.T) {
 		t.Run(product, func(t *testing.T) {
 			tool := ctor().(*simpleAWSRIPurchaseTool)
 			resolveCalled := false
-			tool.createProvider = func(_ string, _ *provider.ProviderConfig) (provider.Provider, error) {
+			tool.createProvider = func(_ string, _ *provider.Config) (provider.Provider, error) {
 				resolveCalled = true
 				return nil, nil
 			}
@@ -167,7 +167,7 @@ func TestSimpleAWSRIPurchaseHandleDryRunNeverCallsProvider(t *testing.T) {
 		t.Run(product, func(t *testing.T) {
 			tool := ctor().(*simpleAWSRIPurchaseTool)
 			resolveCalled := false
-			tool.createProvider = func(_ string, _ *provider.ProviderConfig) (provider.Provider, error) {
+			tool.createProvider = func(_ string, _ *provider.Config) (provider.Provider, error) {
 				resolveCalled = true
 				return nil, nil
 			}
@@ -189,7 +189,7 @@ func TestSimpleAWSRIPurchaseHandleRealPurchaseCallsCorrectService(t *testing.T) 
 			tool := ctor().(*simpleAWSRIPurchaseTool)
 			fake := &fakeServiceClient{purchaseResult: common.PurchaseResult{Success: true, CommitmentID: "res-1"}}
 			var gotService common.ServiceType
-			tool.createProvider = func(_ string, _ *provider.ProviderConfig) (provider.Provider, error) {
+			tool.createProvider = func(_ string, _ *provider.Config) (provider.Provider, error) {
 				return &recordingProvider{
 					fakeProvider: &fakeProvider{name: "aws"},
 					client:       fake,

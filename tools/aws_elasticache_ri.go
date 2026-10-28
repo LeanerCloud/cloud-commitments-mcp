@@ -38,7 +38,7 @@ type elasticacheRIPurchaseArgs struct {
 }
 
 type awsElastiCacheRIPurchaseTool struct {
-	createProvider func(name string, cfg *provider.ProviderConfig) (provider.Provider, error)
+	createProvider func(name string, cfg *provider.Config) (provider.Provider, error)
 }
 
 // NewAWSElastiCacheRIPurchaseTool builds the cudly_aws_elasticache_ri_purchase tool.
@@ -157,7 +157,7 @@ func elasticacheRecommendationFromArgs(args elasticacheRIPurchaseArgs) (rec comm
 // client against a raw, un-trimmed value.
 func (t *awsElastiCacheRIPurchaseTool) resolveClient(args elasticacheRIPurchaseArgs, region string) ResolveClientFunc {
 	return func(ctx context.Context) (provider.ServiceClient, error) {
-		cfg := &provider.ProviderConfig{Name: string(common.ProviderAWS), AWSProfile: CredentialScope(args.AWSProfile), Region: region}
+		cfg := &provider.Config{Name: string(common.ProviderAWS), AWSProfile: CredentialScope(args.AWSProfile), Region: region}
 		prov, err := t.createProvider(string(common.ProviderAWS), cfg)
 		if err != nil {
 			return nil, err

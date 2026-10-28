@@ -256,7 +256,7 @@ func TestAWSSavingsPlansPurchaseHandleForwardsTrimmedRegionToServiceClient(t *te
 	var gotService common.ServiceType
 	var gotRegion string
 	tool := &awsSavingsPlansPurchaseTool{
-		createProvider: func(_ string, _ *provider.ProviderConfig) (provider.Provider, error) {
+		createProvider: func(_ string, _ *provider.Config) (provider.Provider, error) {
 			return &recordingProvider{
 				fakeProvider: &fakeProvider{name: "aws"},
 				client:       fake,
@@ -370,7 +370,7 @@ func TestAWSSavingsPlansPurchaseHandleConfirmFalseRefuses(t *testing.T) {
 	t.Parallel()
 	resolveCalled := false
 	tool := &awsSavingsPlansPurchaseTool{
-		createProvider: func(_ string, _ *provider.ProviderConfig) (provider.Provider, error) {
+		createProvider: func(_ string, _ *provider.Config) (provider.Provider, error) {
 			resolveCalled = true
 			return nil, nil
 		},
@@ -389,7 +389,7 @@ func TestAWSSavingsPlansPurchaseHandleDryRunNeverCallsProvider(t *testing.T) {
 	t.Parallel()
 	resolveCalled := false
 	tool := &awsSavingsPlansPurchaseTool{
-		createProvider: func(_ string, _ *provider.ProviderConfig) (provider.Provider, error) {
+		createProvider: func(_ string, _ *provider.Config) (provider.Provider, error) {
 			resolveCalled = true
 			return nil, nil
 		},
@@ -408,7 +408,7 @@ func TestAWSSavingsPlansPurchaseHandleRealPurchaseUsesScopedService(t *testing.T
 	fake := &fakeServiceClient{purchaseResult: common.PurchaseResult{Success: true, CommitmentID: "sp-1"}}
 	var gotService common.ServiceType
 	tool := &awsSavingsPlansPurchaseTool{
-		createProvider: func(_ string, _ *provider.ProviderConfig) (provider.Provider, error) {
+		createProvider: func(_ string, _ *provider.Config) (provider.Provider, error) {
 			return &recordingProvider{
 				fakeProvider: &fakeProvider{name: "aws"},
 				client:       fake,

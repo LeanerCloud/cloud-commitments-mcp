@@ -64,7 +64,7 @@ func (o *fakeComputeEngineCommitmentsOperation) Wait(_ context.Context, _ ...gax
 // commitments service injected); every other method fails loudly so a
 // regression that reaches further into the provider surface is visible.
 type fakeGCPProvider struct {
-	cfg                *provider.ProviderConfig
+	cfg                *provider.Config
 	commitmentsService *fakeComputeEngineCommitmentsService
 }
 
@@ -134,13 +134,13 @@ func TestGCPComputeEngineCUDPurchaseRefusedByUSDCap(t *testing.T) {
 	service := &fakeComputeEngineCommitmentsService{}
 
 	provider.GetRegistry().Unregister("gcp")
-	err := provider.RegisterProvider("gcp", func(cfg *provider.ProviderConfig) (provider.Provider, error) {
+	err := provider.RegisterProvider("gcp", func(cfg *provider.Config) (provider.Provider, error) {
 		return &fakeGCPProvider{cfg: cfg, commitmentsService: service}, nil
 	})
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		provider.GetRegistry().Unregister("gcp")
-		if regErr := provider.RegisterProvider("gcp", func(cfg *provider.ProviderConfig) (provider.Provider, error) {
+		if regErr := provider.RegisterProvider("gcp", func(cfg *provider.Config) (provider.Provider, error) {
 			return gcpprovider.NewProvider(cfg)
 		}); regErr != nil {
 			t.Errorf("restore real gcp provider factory: %v", regErr)

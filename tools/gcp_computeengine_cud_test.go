@@ -98,7 +98,7 @@ func TestGCPComputeEngineCUDPurchaseHandleConfirmFalseRefuses(t *testing.T) {
 	t.Parallel()
 	resolveCalled := false
 	tool := &gcpComputeEngineCUDPurchaseTool{
-		createProvider: func(_ string, _ *provider.ProviderConfig) (provider.Provider, error) {
+		createProvider: func(_ string, _ *provider.Config) (provider.Provider, error) {
 			resolveCalled = true
 			return nil, nil
 		},
@@ -117,7 +117,7 @@ func TestGCPComputeEngineCUDPurchaseHandleDryRunNeverCallsProvider(t *testing.T)
 	t.Parallel()
 	resolveCalled := false
 	tool := &gcpComputeEngineCUDPurchaseTool{
-		createProvider: func(_ string, _ *provider.ProviderConfig) (provider.Provider, error) {
+		createProvider: func(_ string, _ *provider.Config) (provider.Provider, error) {
 			resolveCalled = true
 			return nil, nil
 		},
@@ -136,7 +136,7 @@ func TestGCPComputeEngineCUDPurchaseHandleRealPurchaseRefused(t *testing.T) {
 	fake := &fakeServiceClient{purchaseResult: common.PurchaseResult{Success: true, CommitmentID: "cud-1"}}
 	var gotService common.ServiceType
 	tool := &gcpComputeEngineCUDPurchaseTool{
-		createProvider: func(_ string, _ *provider.ProviderConfig) (provider.Provider, error) {
+		createProvider: func(_ string, _ *provider.Config) (provider.Provider, error) {
 			return &recordingProvider{
 				fakeProvider: &fakeProvider{name: "gcp"},
 				client:       fake,

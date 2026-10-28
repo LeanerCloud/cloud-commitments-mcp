@@ -41,7 +41,7 @@ type simpleAWSRIPurchaseArgs struct {
 }
 
 type simpleAWSRIPurchaseTool struct {
-	createProvider func(name string, cfg *provider.ProviderConfig) (provider.Provider, error)
+	createProvider func(name string, cfg *provider.Config) (provider.Provider, error)
 	spec           simpleAWSRIPurchaseSpec
 }
 
@@ -211,7 +211,7 @@ func (t *simpleAWSRIPurchaseTool) recommendationFromArgs(args simpleAWSRIPurchas
 // raw, un-trimmed value.
 func (t *simpleAWSRIPurchaseTool) resolveClient(args simpleAWSRIPurchaseArgs, region string) ResolveClientFunc {
 	return func(ctx context.Context) (provider.ServiceClient, error) {
-		cfg := &provider.ProviderConfig{Name: string(common.ProviderAWS), AWSProfile: CredentialScope(args.AWSProfile), Region: region}
+		cfg := &provider.Config{Name: string(common.ProviderAWS), AWSProfile: CredentialScope(args.AWSProfile), Region: region}
 		prov, err := t.createProvider(string(common.ProviderAWS), cfg)
 		if err != nil {
 			return nil, err
