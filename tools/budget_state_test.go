@@ -103,7 +103,7 @@ func TestFileBudgetTwoProcessesShareLimit(t *testing.T) {
 	}
 	assert.Equal(t, 10, total, "limit 100 / 10 per purchase")
 	st := readState(t, path)
-	assert.InDelta(t, 100, st.SpentUSD, 1e-9)
+	assert.Equal(t, usdCents(10000), st.SpentUSD)
 	assert.Empty(t, st.Reservations)
 }
 
@@ -162,7 +162,7 @@ func TestFileBudgetMonthRollover(t *testing.T) {
 	r.settle(true)
 	st := readState(t, path)
 	assert.Equal(t, "2026-11", st.Month)
-	assert.InDelta(t, 100, st.SpentUSD, 1e-9)
+	assert.Equal(t, usdCents(10000), st.SpentUSD)
 }
 
 func TestFileBudgetMonthIsUTC(t *testing.T) {
@@ -185,7 +185,7 @@ func TestFileBudgetSettleAfterRolloverCountsInNewMonth(t *testing.T) {
 	r.settle(true)
 	st := readState(t, path)
 	assert.Equal(t, "2026-11", st.Month)
-	assert.InDelta(t, 30, st.SpentUSD, 1e-9)
+	assert.Equal(t, usdCents(3000), st.SpentUSD)
 	assert.Empty(t, st.Reservations)
 }
 
@@ -302,4 +302,64 @@ func TestFileBudgetLockFileSymlinkRefused(t *testing.T) {
 	require.NoError(t, os.Symlink(target, path+".lock"))
 	_, err := newFileBudget(path).reserve(1, 100)
 	require.ErrorContains(t, err, "budget lock file")
+}
+
+// #82: the persisted ledger sums whole cents and writes exact decimals.
+func TestFileBudgetExactCents(t *testing.T) {
+	path := stateFile(t)
+	fb := newFileBudget(path)
+	a, err := fb.reserve(0.1, 0.3)
+	require.NoError(t, err)
+	b, err := fb.reserve(0.2, 0.3)
+	require.NoError(t, err, "0.10 + 0.20 is exactly the 0.30 budget")
+	a.settle(true)
+	b.settle(true)
+	raw, err := os.ReadFile(path) // #nosec G304 -- test temp file
+	require.NoError(t, err)
+	assert.Contains(t, string(raw), `"spent_usd": 0.3,`)
+}
+
+// A file written before #82 may hold a non-cent amount; it reads rounded up.
+func TestFileBudgetLegacyAmountRoundsUp(t *testing.T) {
+	path := stateFile(t)
+	require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o700))
+	month := time.Now().UTC().Format("2006-01")
+	legacy := fmt.Sprintf(`{"month": %q, "reservations": [{"id": "r1", "usd": 0.001}], "spent_usd": 0.105, "version": 1}`, month)
+	require.NoError(t, os.WriteFile(path, []byte(legacy), 0o600))
+	_, err := newFileBudget(path).reserve(0.01, 0.129)
+	require.Error(t, err, "0.105 reads as 0.11 and 0.001 as 0.01, so 0.01 more exceeds 0.12")
+	_, err = newFileBudget(path).reserve(0.01, 0.131)
+	require.NoError(t, err, "0.11 + 0.01 + 0.01 fits 0.13")
+}
+
+func TestFileBudgetNullAmountIsCorrupt(t *testing.T) {
+	path := stateFile(t)
+	require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o700))
+	month := time.Now().UTC().Format("2006-01")
+	require.NoError(t, os.WriteFile(path, []byte(fmt.Sprintf(`{"month": %q, "reservations": [], "spent_usd": null, "version": 1}`, month)), 0o600))
+	_, err := newFileBudget(path).reserve(1, 100)
+	require.ErrorContains(t, err, "corrupt")
+}
+
+// #82 review: a total past the amount bound is corrupt. Unchecked, enough
+// maximum-size reservations wrap the int64 sum negative, which reads as headroom.
+func TestFileBudgetTotalOverflowIsCorrupt(t *testing.T) {
+	month := time.Now().UTC().Format("2006-01")
+	for name, n := range map[string]int{"wraps negative": 9300, "just over the bound": 1} {
+		t.Run(name, func(t *testing.T) {
+			path := stateFile(t)
+			require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o700))
+			var res strings.Builder
+			for i := range n {
+				if i > 0 {
+					res.WriteString(",")
+				}
+				fmt.Fprintf(&res, `{"id": "r%d", "usd": %d}`, i, int64(maxBudgetUSD))
+			}
+			legacy := fmt.Sprintf(`{"month": %q, "reservations": [%s], "spent_usd": 0.01, "version": 1}`, month, res.String())
+			require.NoError(t, os.WriteFile(path, []byte(legacy), 0o600))
+			_, err := newFileBudget(path).reserve(1, 100)
+			require.ErrorContains(t, err, "corrupt")
+		})
+	}
 }
