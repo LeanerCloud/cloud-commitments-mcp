@@ -29,15 +29,18 @@ type simpleAWSRIPurchaseSpec struct {
 // simpleAWSRIPurchaseArgs is the input schema shared by every
 // simpleAWSRIPurchaseTool instance.
 type simpleAWSRIPurchaseArgs struct {
-	DryRun           *bool  `json:"dry_run,omitempty" jsonschema:"preview only, no purchase; defaults to true"`
-	Confirm          *bool  `json:"confirm,omitempty" jsonschema:"required (with dry_run=false) to execute a real purchase; defaults to false"`
-	Region           string `json:"region" jsonschema:"AWS region, e.g. us-east-1"`
-	ResourceType     string `json:"resource_type" jsonschema:"resource/node type to reserve"`
-	PaymentOption    string `json:"payment_option" jsonschema:"payment schedule"`
-	AWSProfile       string `json:"aws_profile,omitempty" jsonschema:"AWS named profile override (~/.aws/config); default uses ambient credentials"`
-	IdempotencyNonce string `json:"idempotency_nonce,omitempty" jsonschema:"optional; set to a fresh value to authorize a purchase that is otherwise identical to a previous one (e.g. buy 3 more RIs with the same parameters); leave empty (the default) so retries with identical parameters dedupe and never double-buy"`
-	Count            int    `json:"count" jsonschema:"number of nodes/instances to reserve, must be > 0; real purchases are capped by the operator (CUDLY_MCP_MAX_COUNT)"`
-	TermYears        int    `json:"term_years" jsonschema:"commitment length in years"`
+	DryRun  *bool `json:"dry_run,omitempty" jsonschema:"preview only, no purchase; defaults to true"`
+	Confirm *bool `json:"confirm,omitempty" jsonschema:"required (with dry_run=false) to execute a real purchase; defaults to false"`
+	// ApprovedUpfront is a pointer so an omitted figure is told apart from 0.
+	ApprovedUpfront  *float64 `json:"approved_upfront,omitempty" jsonschema:"partial-upfront and all-upfront only: copy approved_upfront (total USD upfront for count instances) from the dry run's response; required on the confirming call, which is refused if the offering's upfront exceeds it by more than 5%"`
+	ApprovedCurrency string   `json:"approved_currency,omitempty" jsonschema:"partial-upfront and all-upfront only: copy approved_currency from the dry run's response; required with approved_upfront on the confirming call"`
+	Region           string   `json:"region" jsonschema:"AWS region, e.g. us-east-1"`
+	ResourceType     string   `json:"resource_type" jsonschema:"resource/node type to reserve"`
+	PaymentOption    string   `json:"payment_option" jsonschema:"payment schedule"`
+	AWSProfile       string   `json:"aws_profile,omitempty" jsonschema:"AWS named profile override (~/.aws/config); default uses ambient credentials"`
+	IdempotencyNonce string   `json:"idempotency_nonce,omitempty" jsonschema:"optional; set to a fresh value to authorize a purchase that is otherwise identical to a previous one (e.g. buy 3 more RIs with the same parameters); leave empty (the default) so retries with identical parameters dedupe and never double-buy"`
+	Count            int      `json:"count" jsonschema:"number of nodes/instances to reserve, must be > 0; real purchases are capped by the operator (CUDLY_MCP_MAX_COUNT)"`
+	TermYears        int      `json:"term_years" jsonschema:"commitment length in years"`
 }
 
 type simpleAWSRIPurchaseTool struct {
@@ -111,7 +114,11 @@ func (t *simpleAWSRIPurchaseTool) Descriptor() Descriptor {
 		Description: fmt.Sprintf(
 			"Purchase AWS %s Reserved Instances. THIS SPENDS REAL MONEY when dry_run=false and confirm=true. "+
 				"Always call with dry_run=true first (the default) to validate your parameters before "+
-				"committing; a dry_run response never contacts AWS and never spends money.",
+				"committing; a dry_run response never spends money. For partial-upfront and all-upfront, the dry run "+
+				"looks up the offering in AWS (read-only, needs credentials) and returns its total upfront as "+
+				"approved_upfront and approved_currency; the confirming call (dry_run=false, confirm=true) must pass "+
+				"both back unchanged, and is refused without them or when the offering's upfront has risen more than "+
+				"5%% above approved_upfront. No-upfront purchases take neither field, and their dry run never contacts AWS.",
 			t.spec.displayName),
 		Annotations:         purchaseAnnotations(t.title()),
 		RealPurchaseEnabled: true,
@@ -122,10 +129,11 @@ func (t *simpleAWSRIPurchaseTool) Descriptor() Descriptor {
 func (t *simpleAWSRIPurchaseTool) Register(s *mcp.Server) error {
 	desc := t.Descriptor().Description
 	schema, err := BuildInputSchema[simpleAWSRIPurchaseArgs](map[string]FieldOverride{
-		"term_years":     {Enum: []any{int(TermOneYear), int(TermThreeYear)}},
-		"payment_option": {Enum: []any{string(PaymentOptionAllUpfront), string(PaymentOptionPartialUpfront), string(PaymentOptionNoUpfront)}},
-		"dry_run":        {Default: true},
-		"confirm":        {Default: false},
+		"term_years":        {Enum: []any{int(TermOneYear), int(TermThreeYear)}},
+		"payment_option":    {Enum: []any{string(PaymentOptionAllUpfront), string(PaymentOptionPartialUpfront), string(PaymentOptionNoUpfront)}},
+		"approved_currency": {Enum: []any{approvedCurrency}},
+		"dry_run":           {Default: true},
+		"confirm":           {Default: false},
 	})
 	if err != nil {
 		return err
@@ -150,17 +158,44 @@ func (t *simpleAWSRIPurchaseTool) handle(ctx context.Context, _ *mcp.CallToolReq
 		return nil, PurchaseResponse{}, err
 	}
 
+	// A confirmed upfront purchase carries the dry run's figure into
+	// rec.CommitmentCost so the provider's go#611 price guard runs.
+	label := t.spec.displayName
+	err = applyApprovedFigures(&rec, args.ApprovedUpfront, args.ApprovedCurrency, label, !dryRun && confirm)
+	if err != nil {
+		return nil, PurchaseResponse{}, err
+	}
+	resolve := t.resolveClient(args, region)
+	quote, err := previewUpfrontQuote(ctx, rec, dryRun, label, func(ctx context.Context) (*common.OfferingDetails, error) {
+		client, resolveErr := resolve(ctx)
+		if resolveErr != nil {
+			return nil, fmt.Errorf("dry run: resolve the AWS %s client to price the offering: %w", label, resolveErr)
+		}
+		od, priceErr := client.GetOfferingDetails(ctx, rec)
+		if priceErr != nil {
+			return nil, fmt.Errorf("dry run: cannot fetch the %s offering's upfront price: %w", label, priceErr)
+		}
+		return od, nil
+	})
+	if err != nil {
+		return nil, PurchaseResponse{}, err
+	}
+
 	resp, err := ExecutePurchase(ctx, PurchaseRequest{
 		Region:          region,
 		Recommendation:  rec,
 		DryRun:          dryRun,
 		Confirm:         confirm,
-		ResolveClient:   t.resolveClient(args, region),
+		ResolveClient:   resolve,
 		Nonce:           args.IdempotencyNonce,
 		CredentialScope: requestCredentialScope(args.AWSProfile, dryRun, "AWS_PROFILE"),
 	})
 	if err != nil {
 		return nil, PurchaseResponse{}, err
+	}
+	if quote != nil {
+		resp.ApprovedUpfront = &quote.total
+		resp.ApprovedCurrency = quote.currency
 	}
 	return nil, *resp, nil
 }

@@ -14,6 +14,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
   offering's upfront exceeds `approved_upfront` by more than 5% (go#611).
   `no-upfront` purchases are unchanged. Real upfront EC2 audit records now carry
   the approved upfront in `estimated_cost`.
+- `cudly_aws_rds_ri_purchase`, `cudly_aws_opensearch_ri_purchase`,
+  `cudly_aws_redshift_ri_purchase` and `cudly_aws_memorydb_ri_purchase` follow
+  the same `approved_upfront`/`approved_currency` flow for `partial-upfront` and
+  `all-upfront` (mcp#125); their upfront dry run looks up the offering
+  (read-only, needs credentials) and no longer claims to never contact AWS. Real upfront audit records for these
+  services carry the approved upfront in `estimated_cost`.
+  `cudly_aws_elasticache_ri_purchase` is unchanged (no provider guard).
 - Every real purchase passes `PurchaseOptions.RequestedAt`, the first-dispatch
   time of its idempotency key, recorded before the provider call and reused on
   retries (go#515: Redshift finds an earlier purchase by start time). With
@@ -73,8 +80,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 - Bumped the `cloud-commitments-go` pins to 8785de4 for the EC2 approved-upfront
   guard (go#611). `provider.ProviderConfig` is now a deprecated alias of
   `provider.Config`; the call sites use `provider.Config`. Behavior pulled in:
-  RDS, MemoryDB, OpenSearch and Redshift purchases gain the same guard, which
-  stays inactive for MCP purchases because those tools set no approved upfront;
+  RDS, MemoryDB, OpenSearch and Redshift purchases gain the same guard (the
+  tools now supply the approved upfront, see Added);
   Azure reservation and savings plan purchases check the billing currency
   (an empty recommendation currency means USD).
 - Bumped the `cloud-commitments-go` pins to 1ce87bd. `computeengine.NewClient` no

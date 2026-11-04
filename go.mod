@@ -8,7 +8,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/costexplorer v1.74.3 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.341.0
 	github.com/aws/aws-sdk-go-v2/service/elasticache v1.64.1
-	github.com/aws/aws-sdk-go-v2/service/memorydb v1.42.6 // indirect
+	github.com/aws/aws-sdk-go-v2/service/memorydb v1.42.6
 	github.com/aws/aws-sdk-go-v2/service/opensearch v1.86.1
 	github.com/aws/aws-sdk-go-v2/service/rds v1.131.1
 	github.com/aws/aws-sdk-go-v2/service/redshift v1.71.5
@@ -77,6 +77,7 @@ require (
 	github.com/LeanerCloud/cloud-commitments-go/providers/aws v0.0.0-20261104073158-39dc6e76ed43
 	github.com/LeanerCloud/cloud-commitments-go/providers/azure v0.0.0-20261104073158-39dc6e76ed43
 	github.com/LeanerCloud/cloud-commitments-go/providers/gcp v0.0.0-20261104073158-39dc6e76ed43
+	github.com/aws/aws-sdk-go-v2/service/sts v1.51.5
 	github.com/google/jsonschema-go v0.4.3
 	github.com/google/uuid v1.6.0
 	github.com/modelcontextprotocol/go-sdk v1.8.0
@@ -99,7 +100,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/internal/v4a v1.5.7 // indirect
 	github.com/aws/aws-sdk-go-v2/service/organizations v1.62.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/signin v1.10.5 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sts v1.51.5 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cncf/xds/go v0.0.0-20260202195803-dba9d589def2 // indirect
 	github.com/envoyproxy/go-control-plane/envoy v1.37.0 // indirect
