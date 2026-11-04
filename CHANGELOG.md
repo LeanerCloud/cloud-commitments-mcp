@@ -65,6 +65,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Bumped the `cloud-commitments-go` pins to 39dc6e7. Azure Advisor
+  recommendations are now priced through the Retail Prices Pricer and skipped
+  when they cannot be priced; rows already covered by Consumption are dropped,
+  so Azure search results can shrink.
 - Bumped the `cloud-commitments-go` pins to 8785de4 for the EC2 approved-upfront
   guard (go#611). `provider.ProviderConfig` is now a deprecated alias of
   `provider.Config`; the call sites use `provider.Config`. Behavior pulled in:
@@ -125,6 +129,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed
 
+- A real purchase the provider refuses before any purchase call (for example the
+  EC2 approved-upfront price guard, which wraps
+  `common.ErrRefusedBeforePurchase`) no longer stays counted in
+  `CUDLY_MCP_BUDGET_USD`. Errors that may follow a real purchase, or that also
+  wrap `ErrOutcomeUnknown`, stay counted.
 - The search's dedupe failure suggests the missing IAM permission only when
   listing existing commitments was refused (AWS `AccessDenied`,
   `UnauthorizedOperation`; Azure or GCP 401/403). Other listing errors, such as
