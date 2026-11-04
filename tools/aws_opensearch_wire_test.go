@@ -192,6 +192,7 @@ func TestOpenSearchRIPurchaseWireEncoding(t *testing.T) {
 	args.Count = 3
 	args.DryRun = boolPtr(false)
 	args.Confirm = boolPtr(true)
+	args.ApprovedUpfront, args.ApprovedCurrency = floatPtr(3000.00), "USD"
 
 	_, resp, err := tool.handle(context.Background(), nil, args)
 	require.NoError(t, err)

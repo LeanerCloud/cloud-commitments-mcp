@@ -251,6 +251,7 @@ func TestPreviewAuditOmitsAmbientCredentialScopeWhenOverrideOmitted(t *testing.T
 			call: func(t *testing.T) {
 				args := validSimpleArgs()
 				args.AWSProfile = ""
+				args.PaymentOption = string(PaymentOptionNoUpfront)
 				tool := ctor().(*simpleAWSRIPurchaseTool)
 				_, resp, err := tool.handle(context.Background(), nil, args)
 				require.NoError(t, err)

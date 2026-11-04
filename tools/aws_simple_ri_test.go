@@ -172,6 +172,7 @@ func TestSimpleAWSRIPurchaseHandleDryRunNeverCallsProvider(t *testing.T) {
 				return nil, nil
 			}
 			args := validSimpleArgs()
+			args.PaymentOption = string(PaymentOptionNoUpfront)
 			args.Confirm = boolPtr(true)
 
 			_, resp, err := tool.handle(context.Background(), nil, args)
@@ -200,6 +201,7 @@ func TestSimpleAWSRIPurchaseHandleRealPurchaseCallsCorrectService(t *testing.T) 
 			args := validSimpleArgs()
 			args.DryRun = boolPtr(false)
 			args.Confirm = boolPtr(true)
+			args.ApprovedUpfront, args.ApprovedCurrency = floatPtr(1000), "USD"
 
 			_, resp, err := tool.handle(context.Background(), nil, args)
 			if product == "redshift" {
