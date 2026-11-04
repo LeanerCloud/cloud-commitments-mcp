@@ -73,10 +73,10 @@ require (
 )
 
 require (
-	github.com/LeanerCloud/cloud-commitments-go/pkg v0.0.0-20261028031643-8785de4553bb
-	github.com/LeanerCloud/cloud-commitments-go/providers/aws v0.0.0-20261028031643-8785de4553bb
-	github.com/LeanerCloud/cloud-commitments-go/providers/azure v0.0.0-20261028031643-8785de4553bb
-	github.com/LeanerCloud/cloud-commitments-go/providers/gcp v0.0.0-20261028031643-8785de4553bb
+	github.com/LeanerCloud/cloud-commitments-go/pkg v0.0.0-20261104073158-39dc6e76ed43
+	github.com/LeanerCloud/cloud-commitments-go/providers/aws v0.0.0-20261104073158-39dc6e76ed43
+	github.com/LeanerCloud/cloud-commitments-go/providers/azure v0.0.0-20261104073158-39dc6e76ed43
+	github.com/LeanerCloud/cloud-commitments-go/providers/gcp v0.0.0-20261104073158-39dc6e76ed43
 	github.com/aws/aws-sdk-go-v2/service/sts v1.51.5
 	github.com/google/jsonschema-go v0.4.3
 	github.com/google/uuid v1.6.0
