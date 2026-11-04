@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io/fs"
 	"log"
-	"math"
 	"os"
 	"path/filepath"
 	"time"
@@ -28,25 +27,23 @@ const budgetLockTimeout = 10 * time.Second
 type budgetState struct {
 	Month        string              `json:"month"`
 	Reservations []budgetReservEntry `json:"reservations"`
-	SpentUSD     float64             `json:"spent_usd"`
+	SpentUSD     usdCents            `json:"spent_usd"`
 	Version      int                 `json:"version"`
 }
 
 type budgetReservEntry struct {
-	ID  string  `json:"id"`
-	USD float64 `json:"usd"`
+	ID  string   `json:"id"`
+	USD usdCents `json:"usd"`
 }
 
 // totalUSD is spend plus every unsettled reservation.
-func (s budgetState) totalUSD() float64 {
+func (s budgetState) totalUSD() usdCents {
 	total := s.SpentUSD
 	for _, r := range s.Reservations {
 		total += r.USD
 	}
 	return total
 }
-
-func validBudgetAmount(v float64) bool { return v >= 0 && !math.IsNaN(v) && !math.IsInf(v, 0) }
 
 func (s budgetState) validate() error {
 	if s.Version != budgetStateVersion {
@@ -55,12 +52,9 @@ func (s budgetState) validate() error {
 	if _, err := time.Parse("2006-01", s.Month); err != nil {
 		return fmt.Errorf("invalid month %q: %w", s.Month, err)
 	}
-	if !validBudgetAmount(s.SpentUSD) {
-		return fmt.Errorf("invalid spent_usd %v", s.SpentUSD)
-	}
 	seen := make(map[string]bool, len(s.Reservations))
 	for _, r := range s.Reservations {
-		if r.ID == "" || !validBudgetAmount(r.USD) {
+		if r.ID == "" {
 			return fmt.Errorf("invalid reservation %+v", r)
 		}
 		if seen[r.ID] {
@@ -186,14 +180,18 @@ func writeStateAtomically(path string, v any, what string) error {
 // reserve refuses when the month's spend plus reservations plus usd would
 // exceed limit (equal is allowed) and otherwise records a reservation before
 // returning, so the hold is on disk before the purchase call.
-func (f *fileBudget) reserve(usd, limit float64) (*budgetReservation, error) {
+func (f *fileBudget) reserve(usdF, limitF float64) (*budgetReservation, error) {
+	usd, limit, err := budgetCents(usdF, limitF)
+	if err != nil {
+		return nil, err
+	}
 	id := uuid.NewString()
-	var committed float64
+	var committed usdCents
 	exceeded := false
-	err := f.update(func(st *budgetState) (bool, error) {
+	err = f.update(func(st *budgetState) (bool, error) {
 		if st.totalUSD()+usd > limit {
 			exceeded = true
-			return false, fmt.Errorf("refusing real purchase: %.2f USD would exceed the cumulative budget %s=%.2f (%.2f USD remaining in %s UTC; state file %s, resets next calendar month)",
+			return false, fmt.Errorf("refusing real purchase: %s USD would exceed the cumulative budget %s=%s (%s USD remaining in %s UTC; state file %s, resets next calendar month)",
 				usd, EnvBudgetUSD, limit, max(0, limit-st.totalUSD()), st.Month, f.path)
 		}
 		st.Reservations = append(st.Reservations, budgetReservEntry{ID: id, USD: usd})
@@ -215,7 +213,7 @@ func (f *fileBudget) reserve(usd, limit float64) (*budgetReservation, error) {
 // when money was spent. A failed write cannot undo the purchase: the
 // reservation then stays on disk and keeps counting, which errs toward
 // refusing.
-func (f *fileBudget) settle(id string, usd float64, spent bool) {
+func (f *fileBudget) settle(id string, usd usdCents, spent bool) {
 	err := f.update(func(st *budgetState) (bool, error) {
 		for i, r := range st.Reservations {
 			if r.ID == id {
@@ -229,6 +227,6 @@ func (f *fileBudget) settle(id string, usd float64, spent bool) {
 		return true, nil
 	})
 	if err != nil {
-		log.Printf("mcp budget: settle %.2f USD (spent=%t) in %s failed, reservation stays counted: %v", usd, spent, f.path, err)
+		log.Printf("mcp budget: settle %s USD (spent=%t) in %s failed, reservation stays counted: %v", usd, spent, f.path, err)
 	}
 }

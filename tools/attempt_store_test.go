@@ -97,7 +97,7 @@ func mustBudgetSpent(t *testing.T, path string) float64 {
 	t.Helper()
 	st, err := newFileBudget(path).load()
 	require.NoError(t, err)
-	return st.totalUSD()
+	return float64(st.totalUSD()) / 100
 }
 
 type recordingProviderOpts struct {

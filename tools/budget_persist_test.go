@@ -35,7 +35,7 @@ func TestPersistedBudgetSurvivesRestart(t *testing.T) {
 	err := runWithNonce(fake, "b")
 	require.ErrorContains(t, err, EnvBudgetUSD)
 	assert.Equal(t, 1, fake.purchaseCalls)
-	assert.InDelta(t, 60, readState(t, path).SpentUSD, 1e-9)
+	assert.Equal(t, usdCents(6000), readState(t, path).SpentUSD)
 	assert.Zero(t, processBudget.committedUSD(), "persisted mode must not use the in-memory ledger")
 }
 
@@ -44,7 +44,7 @@ func TestPersistedBudgetFailedPurchaseKeepsCounted(t *testing.T) {
 	fake := pricedFake(60, common.PurchaseResult{}, assert.AnError)
 	require.Error(t, runWithNonce(fake, "a"))
 	st := readState(t, path)
-	assert.InDelta(t, 60, st.SpentUSD, 1e-9)
+	assert.Equal(t, usdCents(6000), st.SpentUSD)
 	assert.Empty(t, st.Reservations)
 }
 
@@ -123,7 +123,7 @@ func TestPersistedBudgetKeepsCountedWhenPurchaseAPIFailsAfterGuard(t *testing.T)
 	_, _, err = tool.handle(context.Background(), nil, confirmed(args, preview.ApprovedUpfront, preview.ApprovedCurrency))
 	require.Error(t, err)
 	assert.Equal(t, 1, api.purchaseCalls)
-	assert.Greater(t, readState(t, path).SpentUSD, 0.0)
+	assert.Greater(t, readState(t, path).SpentUSD, usdCents(0))
 }
 
 type failingPurchaseEC2API struct{ *pricedEC2API }

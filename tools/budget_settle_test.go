@@ -43,7 +43,7 @@ func TestBudgetPanicInPurchaseStaysReserved(t *testing.T) {
 	processBudget.mu.Lock()
 	reserved := processBudget.reserved
 	processBudget.mu.Unlock()
-	assert.InDelta(t, 60, reserved, 1e-9)
+	assert.Equal(t, usdCents(6000), reserved)
 
 	other := pricedFake(60, common.PurchaseResult{Success: true, CommitmentID: "id"}, nil)
 	require.ErrorContains(t, runWithNonce(other, "b"), EnvBudgetUSD)

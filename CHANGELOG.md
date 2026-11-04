@@ -137,6 +137,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed
 
+- The cumulative budget (`CUDLY_MCP_BUDGET_USD`, in memory and in
+  `CUDLY_MCP_BUDGET_STATE`) adds and compares whole cents instead of float64
+  dollars, so a residual such as 0.1 + 0.2 = 0.30000000000000004 no longer
+  refuses a purchase that exactly fits. Each purchase total rounds up to the cent
+  and the budget rounds down, so spend is never undercounted. The state file
+  format is unchanged; an older file's fraction of a cent reads rounded up, and a
+  `null` amount is now corrupt instead of 0 (#82).
 - A partial- or all-upfront dry run whose offering cannot be priced now writes an
   audit record (`status: "error"`, `dry_run: true`) instead of returning without
   one, as the README promises for previews (Refs #129).
