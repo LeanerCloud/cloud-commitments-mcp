@@ -107,13 +107,13 @@ func (t *awsRDSRIPurchaseTool) handle(ctx context.Context, _ *mcp.CallToolReques
 	}
 	resolve := t.resolveClient(args, region)
 	quote, err := previewUpfrontQuote(ctx, rec, dryRun, "RDS", func(ctx context.Context) (*common.OfferingDetails, error) {
-		client, err := resolve(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("dry run: resolve the AWS RDS client to price the offering: %w", err)
+		client, resolveErr := resolve(ctx)
+		if resolveErr != nil {
+			return nil, fmt.Errorf("dry run: resolve the AWS RDS client to price the offering: %w", resolveErr)
 		}
-		od, err := client.GetOfferingDetails(ctx, rec)
-		if err != nil {
-			return nil, fmt.Errorf("dry run: cannot fetch the RDS offering's upfront price: %w", err)
+		od, priceErr := client.GetOfferingDetails(ctx, rec)
+		if priceErr != nil {
+			return nil, fmt.Errorf("dry run: cannot fetch the RDS offering's upfront price: %w", priceErr)
 		}
 		return od, nil
 	})

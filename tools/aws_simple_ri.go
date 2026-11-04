@@ -167,13 +167,13 @@ func (t *simpleAWSRIPurchaseTool) handle(ctx context.Context, _ *mcp.CallToolReq
 	}
 	resolve := t.resolveClient(args, region)
 	quote, err := previewUpfrontQuote(ctx, rec, dryRun, label, func(ctx context.Context) (*common.OfferingDetails, error) {
-		client, err := resolve(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("dry run: resolve the AWS %s client to price the offering: %w", label, err)
+		client, resolveErr := resolve(ctx)
+		if resolveErr != nil {
+			return nil, fmt.Errorf("dry run: resolve the AWS %s client to price the offering: %w", label, resolveErr)
 		}
-		od, err := client.GetOfferingDetails(ctx, rec)
-		if err != nil {
-			return nil, fmt.Errorf("dry run: cannot fetch the %s offering's upfront price: %w", label, err)
+		od, priceErr := client.GetOfferingDetails(ctx, rec)
+		if priceErr != nil {
+			return nil, fmt.Errorf("dry run: cannot fetch the %s offering's upfront price: %w", label, priceErr)
 		}
 		return od, nil
 	})

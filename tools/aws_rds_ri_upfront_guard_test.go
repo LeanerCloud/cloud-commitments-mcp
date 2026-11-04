@@ -36,13 +36,13 @@ func guardRDSArgs(nonce string, upfront *float64, currency string) rdsRIPurchase
 func TestRDSUpfrontGuardBoundaryOnRealClient(t *testing.T) {
 	for _, tc := range []struct {
 		name    string
+		wantErr string
 		price   float64
 		buys    bool
-		wantErr string
 	}{
-		{"at approved", 1000, true, ""},
-		{"at tolerance edge", 1050.00, true, ""},
-		{"just above tolerance", 1050.01, false, "exceeds the approved upfront"},
+		{"at approved", "", 1000, true},
+		{"at tolerance edge", "", 1050.00, true},
+		{"just above tolerance", "exceeds the approved upfront", 1050.01, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Setenv(EnvAuditLog, filepath.Join(t.TempDir(), "audit.jsonl"))
