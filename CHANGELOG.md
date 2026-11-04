@@ -137,6 +137,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed
 
+- A partial- or all-upfront dry run whose offering cannot be priced now writes an
+  audit record (`status: "error"`, `dry_run: true`) instead of returning without
+  one, as the README promises for previews (Refs #129).
 - A real purchase the provider refuses before any purchase call (for example the
   EC2 approved-upfront price guard, which wraps
   `common.ErrRefusedBeforePurchase`) no longer stays counted in
