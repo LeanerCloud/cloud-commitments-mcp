@@ -22,8 +22,8 @@ func applyApprovedUpfront(rec *common.Recommendation, args ec2RIPurchaseArgs, co
 // It returns nil (and contacts nothing) for a real purchase or a no-upfront
 // dry run. The lookup is read-only (DescribeReservedInstancesOfferings) and
 // needs credentials, but not the real-purchase opt-in or the spend caps.
-func (t *awsEC2RIPurchaseTool) previewUpfront(ctx context.Context, args ec2RIPurchaseArgs, region string, rec common.Recommendation, offeringClass string, dryRun bool) (*upfrontQuote, error) {
-	return previewUpfrontQuote(ctx, rec, dryRun, "EC2", func(ctx context.Context) (*common.OfferingDetails, error) {
+func (t *awsEC2RIPurchaseTool) previewUpfront(ctx context.Context, args ec2RIPurchaseArgs, region string, req *PurchaseRequest, offeringClass string) (*upfrontQuote, error) {
+	return previewUpfrontQuote(ctx, req, "EC2", func(ctx context.Context) (*common.OfferingDetails, error) {
 		client, err := t.resolveClient(args, region)(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("dry run: resolve the AWS EC2 client to price the offering: %w", err)
@@ -34,7 +34,7 @@ func (t *awsEC2RIPurchaseTool) previewUpfront(ctx context.Context, args ec2RIPur
 		if !ok {
 			return nil, errors.New("dry run: the EC2 client cannot price an offering class (GetOfferingDetailsForClass missing, cloud-commitments-go#574)")
 		}
-		od, err := pricer.GetOfferingDetailsForClass(ctx, rec, offeringClass)
+		od, err := pricer.GetOfferingDetailsForClass(ctx, req.Recommendation, offeringClass)
 		if err != nil {
 			return nil, fmt.Errorf("dry run: cannot fetch the EC2 offering's upfront price: %w", err)
 		}

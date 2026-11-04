@@ -77,15 +77,26 @@ func applyApprovedFigures(rec *common.Recommendation, upfront *float64, currency
 
 // previewUpfrontQuote is previewUpfront for any service: price resolves the
 // client and fetches the offering, and must word its own errors.
-func previewUpfrontQuote(ctx context.Context, rec common.Recommendation, dryRun bool, service string, price func(context.Context) (*common.OfferingDetails, error)) (*upfrontQuote, error) {
-	if !dryRun || !requiresApprovedUpfront(rec.PaymentOption) {
+//
+// A dry run that cannot price the offering (the lookup fails or yields no
+// usable USD figure) returns before ExecutePurchase
+// would audit it, so it is recorded here as an error preview; the caller
+// still gets the error. A real purchase writes nothing here.
+func previewUpfrontQuote(ctx context.Context, req *PurchaseRequest, service string, price func(context.Context) (*common.OfferingDetails, error)) (*upfrontQuote, error) {
+	rec := req.Recommendation
+	if !req.DryRun || !requiresApprovedUpfront(rec.PaymentOption) {
 		return nil, nil
 	}
 	od, err := price(ctx)
+	var quote *upfrontQuote
+	if err == nil {
+		quote, err = quoteUpfront(od, rec, service)
+	}
 	if err != nil {
+		recordPurchaseAudit(rec, req.CredentialScope, common.PurchaseResult{DryRun: true, Error: err}, auditStatusError, true)
 		return nil, err
 	}
-	return quoteUpfront(od, rec, service)
+	return quote, nil
 }
 
 // quoteUpfront turns the per-reservation offering price into the
