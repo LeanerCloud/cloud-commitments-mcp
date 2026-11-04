@@ -3,11 +3,14 @@
 package tools
 
 import (
+	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
+	sdkec2 "github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -83,4 +86,49 @@ func TestUnsetBudgetStateStaysInMemory(t *testing.T) {
 	entries, err := os.ReadDir(state)
 	require.NoError(t, err)
 	assert.Empty(t, entries, "no state file may be created when %s is unset", EnvBudgetState)
+}
+
+// TestPersistedBudgetReleasedWhenUpfrontGuardRefuses runs the real EC2 client
+// behind its API fake: the go#611 guard refuses before any purchase call, so
+// nothing may stay committed.
+func TestPersistedBudgetReleasedWhenUpfrontGuardRefuses(t *testing.T) {
+	path := persistedBudget(t)
+	api := newPricedEC2API(PaymentOptionAllUpfront, 500)
+	tool, _ := ec2ToolOverFakeAPI(api)
+	args := upfrontEC2Args(PaymentOptionAllUpfront, "budget-refused")
+	_, preview, err := tool.handle(context.Background(), nil, args)
+	require.NoError(t, err)
+
+	api.fixedPrice = 526 // +5.2% over the approved 1500
+	t.Setenv(EnvBudgetUSD, "100000")
+	_, _, err = tool.handle(context.Background(), nil, confirmed(args, preview.ApprovedUpfront, preview.ApprovedCurrency))
+	require.ErrorContains(t, err, "exceeds the approved upfront")
+	assert.Zero(t, api.purchaseCalls)
+	st := readState(t, path)
+	assert.Zero(t, st.SpentUSD)
+	assert.Empty(t, st.Reservations)
+}
+
+// TestPersistedBudgetKeepsCountedWhenPurchaseAPIFailsAfterGuard: the guard
+// passes and the purchase call itself fails, so money may have moved.
+func TestPersistedBudgetKeepsCountedWhenPurchaseAPIFailsAfterGuard(t *testing.T) {
+	path := persistedBudget(t)
+	t.Setenv(EnvBudgetUSD, "100000")
+	api := &failingPurchaseEC2API{pricedEC2API: newPricedEC2API(PaymentOptionAllUpfront, 500)}
+	tool, _ := ec2ToolOverFakeAPI(api)
+	args := upfrontEC2Args(PaymentOptionAllUpfront, "budget-api-fail")
+	_, preview, err := tool.handle(context.Background(), nil, args)
+	require.NoError(t, err)
+
+	_, _, err = tool.handle(context.Background(), nil, confirmed(args, preview.ApprovedUpfront, preview.ApprovedCurrency))
+	require.Error(t, err)
+	assert.Equal(t, 1, api.purchaseCalls)
+	assert.Greater(t, readState(t, path).SpentUSD, 0.0)
+}
+
+type failingPurchaseEC2API struct{ *pricedEC2API }
+
+func (f *failingPurchaseEC2API) PurchaseReservedInstancesOffering(context.Context, *sdkec2.PurchaseReservedInstancesOfferingInput, ...func(*sdkec2.Options)) (*sdkec2.PurchaseReservedInstancesOfferingOutput, error) {
+	f.purchaseCalls++
+	return nil, errors.New("api down")
 }
