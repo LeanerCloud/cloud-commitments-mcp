@@ -154,10 +154,10 @@ type PurchaseResponse struct {
 	SavingsPercentage *float64 `json:"savings_percentage,omitempty"`
 	EffectiveDate     *string  `json:"effective_date,omitempty"`
 	// ApprovedUpfront and ApprovedCurrency are set only by a partial- or
-	// all-upfront EC2 RI dry run: the offering's total upfront for the
+	// all-upfront dry run of an EC2, RDS, OpenSearch, Redshift or MemoryDB RI: the offering's total upfront for the
 	// requested count. The confirming call passes them back so the provider
 	// refuses an offering repriced above them (go#611).
-	ApprovedUpfront *float64 `json:"approved_upfront,omitempty" jsonschema:"EC2 RI partial/all-upfront dry run only: the offering's total upfront for count instances; pass it as approved_upfront on the confirming call"`
+	ApprovedUpfront *float64 `json:"approved_upfront,omitempty" jsonschema:"partial/all-upfront dry runs of EC2, RDS, OpenSearch, Redshift and MemoryDB RIs only: the offering's total upfront for count instances; pass it as approved_upfront on the confirming call"`
 
 	// Archera is the optional underutilization-insurance offer, populated
 	// ONLY after a real purchase actually succeeds. See archeraOffer.
@@ -166,7 +166,7 @@ type PurchaseResponse struct {
 	CommitmentID string `json:"commitment_id,omitempty"`
 	Error        string `json:"error,omitempty"`
 	// ApprovedCurrency is the currency of ApprovedUpfront (always USD).
-	ApprovedCurrency string `json:"approved_currency,omitempty" jsonschema:"EC2 RI partial/all-upfront dry run only: currency of approved_upfront; pass it as approved_currency on the confirming call"`
+	ApprovedCurrency string `json:"approved_currency,omitempty" jsonschema:"partial/all-upfront dry runs of EC2, RDS, OpenSearch, Redshift and MemoryDB RIs only: currency of approved_upfront; pass it as approved_currency on the confirming call"`
 	// OfferingClass echoes the EC2 RI offering class so the user sees it in
 	// the preview before buying; omitted for other products.
 	OfferingClass string `json:"offering_class,omitempty"`
