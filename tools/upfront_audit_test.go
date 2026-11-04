@@ -121,8 +121,8 @@ func pinAuditEnv(t *testing.T) string {
 // requireErrorPreviewMatchesSuccess runs the successful preview as a baseline
 // in its own audit file, then the failing scenario in another, and requires
 // exactly one error record that differs from the baseline only in timestamp,
-// status and error_message.
-func requireErrorPreviewMatchesSuccess(t *testing.T, run upfrontAuditRun, failing upfrontAuditScenario) {
+// status and error_message. A non-empty wantMsg must appear in error_message.
+func requireErrorPreviewMatchesSuccess(t *testing.T, run upfrontAuditRun, failing upfrontAuditScenario, wantMsg string) {
 	t.Helper()
 	basePath := pinAuditEnv(t)
 	purchases, err := run(t, scenarioPreviewOK)
@@ -141,6 +141,9 @@ func requireErrorPreviewMatchesSuccess(t *testing.T, run upfrontAuditRun, failin
 	assert.Equal(t, auditStatusError, got["status"])
 	assert.Equal(t, true, got["dry_run"])
 	assert.NotEmpty(t, got["error_message"])
+	if wantMsg != "" {
+		assert.Contains(t, got["error_message"], wantMsg)
+	}
 	want := baseline[0]
 	for _, k := range []string{"timestamp", "status", "error_message"} {
 		delete(got, k)
@@ -161,11 +164,11 @@ func TestUpfrontAuditRecords(t *testing.T) {
 		})
 
 		t.Run(name+"/failed preview pricing writes one error record", func(t *testing.T) {
-			requireErrorPreviewMatchesSuccess(t, run, scenarioPreviewPricingFails)
+			requireErrorPreviewMatchesSuccess(t, run, scenarioPreviewPricingFails, errPricingDown.Error())
 		})
 
 		t.Run(name+"/quote rejected writes one error record", func(t *testing.T) {
-			requireErrorPreviewMatchesSuccess(t, run, scenarioQuoteRejected)
+			requireErrorPreviewMatchesSuccess(t, run, scenarioQuoteRejected, "")
 		})
 
 		t.Run(name+"/real purchase writes one record", func(t *testing.T) {
