@@ -24,6 +24,7 @@ const (
 	scenarioPreviewOK
 	scenarioRealPurchase
 	scenarioConfirmedMissingFigures
+	scenarioQuoteRejected
 )
 
 var errPricingDown = errors.New("pricing backend down")
@@ -32,6 +33,9 @@ func upfrontAuditTools() map[string]upfrontAuditRun {
 	tools := map[string]upfrontAuditRun{
 		"ec2": func(t *testing.T, s upfrontAuditScenario) (int, error) {
 			api := newPricedEC2API(PaymentOptionAllUpfront, 500)
+			if s == scenarioQuoteRejected {
+				api.fixedPrice, api.standardPrice = 0, 0
+			}
 			if s == scenarioPreviewPricingFails {
 				api.describeErr = errPricingDown
 			}
@@ -52,6 +56,9 @@ func upfrontAuditTools() map[string]upfrontAuditRun {
 			if s == scenarioPreviewPricingFails {
 				fake.offeringErr = errPricingDown
 			}
+			if s == scenarioQuoteRejected {
+				fake.offering = upfrontOffering(0, "USD")
+			}
 			tool, _ := rdsToolOver(fake)
 			args := upfrontRDSArgs(PaymentOptionAllUpfront, "audit-"+t.Name())
 			switch s {
@@ -70,6 +77,9 @@ func upfrontAuditTools() map[string]upfrontAuditRun {
 				purchaseResult: common.PurchaseResult{Success: true, CommitmentID: "res-1"}}
 			if s == scenarioPreviewPricingFails {
 				fake.offeringErr = errPricingDown
+			}
+			if s == scenarioQuoteRejected {
+				fake.offering = upfrontOffering(0, "USD")
 			}
 			tool, _ := simpleToolOver(ctor, fake)
 			args := upfrontSimpleArgs(PaymentOptionAllUpfront, "audit-"+product+t.Name())
@@ -139,6 +149,18 @@ func TestUpfrontAuditRecords(t *testing.T) {
 				}
 				assert.Equal(t, previewRecord, got, "only status and error_message differ from a successful preview")
 			}
+		})
+
+		t.Run(name+"/quote rejected writes one error record", func(t *testing.T) {
+			path := pin(t)
+			purchases, err := run(t, scenarioQuoteRejected)
+			require.Error(t, err)
+			assert.Zero(t, purchases)
+			recs := auditRecords(t, path)
+			require.Len(t, recs, 1)
+			assert.Equal(t, auditStatusError, recs[0]["status"])
+			assert.Equal(t, true, recs[0]["dry_run"])
+			assert.NotEmpty(t, recs[0]["error_message"])
 		})
 
 		t.Run(name+"/real purchase writes one record", func(t *testing.T) {
