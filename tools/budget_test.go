@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -158,4 +159,35 @@ func TestBudgetEqualToLimitAllowed(t *testing.T) {
 	fake.offering.TotalCost = 0.01
 	require.ErrorContains(t, runWithNonce(fake, "c"), EnvBudgetUSD)
 	assert.Equal(t, 2, fake.purchaseCalls)
+}
+
+func TestPurchaseSpent(t *testing.T) {
+	t.Parallel()
+	refused := fmt.Errorf("guard: %w", common.ErrRefusedBeforePurchase)
+	unknown := fmt.Errorf("%w: %w", common.ErrRefusedBeforePurchase, common.ErrOutcomeUnknown)
+	cases := []struct {
+		err    error
+		name   string
+		result common.PurchaseResult
+		spent  bool
+	}{
+		{refused, "sentinel in err only", common.PurchaseResult{}, false},
+		{nil, "sentinel in result.Error only", common.PurchaseResult{Error: refused}, false},
+		{refused, "sentinel in both", common.PurchaseResult{Error: refused}, false},
+		{refused, "sentinel in err, plain result.Error", common.PurchaseResult{Error: assert.AnError}, true},
+		{assert.AnError, "sentinel in result.Error, plain err", common.PurchaseResult{Error: refused}, true},
+		{unknown, "sentinel with outcome unknown", common.PurchaseResult{}, true},
+		{refused, "sentinel with success", common.PurchaseResult{Success: true}, true},
+		{refused, "sentinel with commitment id", common.PurchaseResult{CommitmentID: "ri-1"}, true},
+		{assert.AnError, "plain error", common.PurchaseResult{}, true},
+		{nil, "nil error with success", common.PurchaseResult{Success: true}, true},
+		{nil, "existing commitment", common.PurchaseResult{ExistingCommitment: true}, false},
+		{nil, "clean no-op", common.PurchaseResult{}, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tc.spent, purchaseSpent(tc.result, tc.err))
+		})
+	}
 }

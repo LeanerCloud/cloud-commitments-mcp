@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -86,16 +87,33 @@ func (l *budgetLedger) committedUSD() float64 {
 }
 
 // purchaseSpent reports whether a purchase that reached PurchaseCommitment
-// must stay counted. Only a clean no-op (nil error, no success, no error) or
-// an adopted existing commitment returned with no error is released; every
-// error (err or result.Error), including one returned beside ExistingCommitment, and any other
-// result may have spent money, so it stays counted.
+// must stay counted. A clean no-op (nil error, no success, no error) or an
+// adopted existing commitment returned with no error is released. A failure is
+// released only when every error carries common.ErrRefusedBeforePurchase, none
+// carries ErrOutcomeUnknown, and the result shows no success or commitment ID:
+// the provider refused before any purchase call. Any other error, including
+// one returned beside ExistingCommitment, may have spent money and stays counted.
 func purchaseSpent(result common.PurchaseResult, err error) bool {
 	if err != nil || result.Error != nil {
-		return true
+		return !refusedBeforePurchase(result, err)
 	}
 	if result.ExistingCommitment {
 		return false
 	}
 	return result.Success
+}
+
+func refusedBeforePurchase(result common.PurchaseResult, err error) bool {
+	if result.Success || result.CommitmentID != "" {
+		return false
+	}
+	for _, e := range []error{err, result.Error} {
+		if e == nil {
+			continue
+		}
+		if !errors.Is(e, common.ErrRefusedBeforePurchase) || errors.Is(e, common.ErrOutcomeUnknown) {
+			return false
+		}
+	}
+	return true
 }
