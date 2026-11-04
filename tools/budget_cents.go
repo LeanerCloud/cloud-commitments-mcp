@@ -16,6 +16,8 @@ type usdCents int64
 // exact decimal, so a state file round-trips without loss.
 const maxBudgetUSD = 1e13
 
+const maxBudgetCents = usdCents(maxBudgetUSD * 100)
+
 // spendCents converts a spend amount, rounding up so spend is never
 // undercounted. Half-even or half-up rounding could drop up to half a cent.
 func spendCents(usd float64) (usdCents, error) {

@@ -340,3 +340,26 @@ func TestFileBudgetNullAmountIsCorrupt(t *testing.T) {
 	_, err := newFileBudget(path).reserve(1, 100)
 	require.ErrorContains(t, err, "corrupt")
 }
+
+// #82 review: a total past the amount bound is corrupt. Unchecked, enough
+// maximum-size reservations wrap the int64 sum negative, which reads as headroom.
+func TestFileBudgetTotalOverflowIsCorrupt(t *testing.T) {
+	month := time.Now().UTC().Format("2006-01")
+	for name, n := range map[string]int{"wraps negative": 9300, "just over the bound": 1} {
+		t.Run(name, func(t *testing.T) {
+			path := stateFile(t)
+			require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o700))
+			var res strings.Builder
+			for i := range n {
+				if i > 0 {
+					res.WriteString(",")
+				}
+				fmt.Fprintf(&res, `{"id": "r%d", "usd": %d}`, i, int64(maxBudgetUSD))
+			}
+			legacy := fmt.Sprintf(`{"month": %q, "reservations": [%s], "spent_usd": 0.01, "version": 1}`, month, res.String())
+			require.NoError(t, os.WriteFile(path, []byte(legacy), 0o600))
+			_, err := newFileBudget(path).reserve(1, 100)
+			require.ErrorContains(t, err, "corrupt")
+		})
+	}
+}

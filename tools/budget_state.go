@@ -53,6 +53,9 @@ func (s budgetState) validate() error {
 		return fmt.Errorf("invalid month %q: %w", s.Month, err)
 	}
 	seen := make(map[string]bool, len(s.Reservations))
+	// Each amount is at most maxBudgetCents, so checking before adding cannot
+	// overflow; a total past the bound would let a wrapped sum read as headroom.
+	total := s.SpentUSD
 	for _, r := range s.Reservations {
 		if r.ID == "" {
 			return fmt.Errorf("invalid reservation %+v", r)
@@ -61,6 +64,10 @@ func (s budgetState) validate() error {
 			return fmt.Errorf("duplicate reservation id %q", r.ID)
 		}
 		seen[r.ID] = true
+		if total > maxBudgetCents-r.USD {
+			return fmt.Errorf("spent_usd plus reservations exceeds %.0f USD", float64(maxBudgetUSD))
+		}
+		total += r.USD
 	}
 	return nil
 }
