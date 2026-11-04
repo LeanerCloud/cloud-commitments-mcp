@@ -104,7 +104,7 @@ func purchaseSpent(result common.PurchaseResult, err error) bool {
 }
 
 func refusedBeforePurchase(result common.PurchaseResult, err error) bool {
-	if result.Success || result.CommitmentID != "" {
+	if result.Success || result.CommitmentID != "" || result.ExistingCommitment {
 		return false
 	}
 	for _, e := range []error{err, result.Error} {

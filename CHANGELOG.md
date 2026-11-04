@@ -68,7 +68,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 - Bumped the `cloud-commitments-go` pins to 39dc6e7. Azure Advisor
   recommendations are now priced through the Retail Prices Pricer and skipped
   when they cannot be priced; rows already covered by Consumption are dropped,
-  so Azure search results can shrink.
+  so Azure search results can shrink. The approved-upfront guard errors the
+  AWS RI purchase tools return now start with "refused before purchase: ".
 - Bumped the `cloud-commitments-go` pins to 8785de4 for the EC2 approved-upfront
   guard (go#611). `provider.ProviderConfig` is now a deprecated alias of
   `provider.Config`; the call sites use `provider.Config`. Behavior pulled in:

@@ -178,6 +178,7 @@ func TestPurchaseSpent(t *testing.T) {
 		{assert.AnError, "sentinel in result.Error, plain err", common.PurchaseResult{Error: refused}, true},
 		{unknown, "sentinel with outcome unknown", common.PurchaseResult{}, true},
 		{refused, "sentinel with success", common.PurchaseResult{Success: true}, true},
+		{refused, "sentinel with existing commitment", common.PurchaseResult{ExistingCommitment: true}, true},
 		{refused, "sentinel with commitment id", common.PurchaseResult{CommitmentID: "ri-1"}, true},
 		{assert.AnError, "plain error", common.PurchaseResult{}, true},
 		{nil, "nil error with success", common.PurchaseResult{Success: true}, true},
