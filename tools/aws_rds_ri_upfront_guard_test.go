@@ -24,8 +24,18 @@ func allUpfrontRDSFake(price float64) *fakeRDSAPI {
 	return &fakeRDSAPI{offerings: []rdstypes.ReservedDBInstancesOffering{o}}
 }
 
-func guardRDSArgs(nonce string, upfront *float64, currency string) rdsRIPurchaseArgs {
-	args := upfrontRDSArgs(PaymentOptionAllUpfront, nonce)
+// partialUpfrontRDSFake serves one Partial Upfront offering: FixedPrice plus
+// a recurring hourly charge, which the guard must ignore.
+func partialUpfrontRDSFake(price float64) *fakeRDSAPI {
+	o := rdsOffering("off-partial-upfront", "postgresql")
+	o.OfferingType = aws.String("Partial Upfront")
+	o.FixedPrice = aws.Float64(price)
+	o.RecurringCharges = []rdstypes.RecurringCharge{{RecurringChargeAmount: aws.Float64(0.05), RecurringChargeFrequency: aws.String("Hourly")}}
+	return &fakeRDSAPI{offerings: []rdstypes.ReservedDBInstancesOffering{o}}
+}
+
+func guardRDSArgs(payment PaymentOption, nonce string, upfront *float64, currency string) rdsRIPurchaseArgs {
+	args := upfrontRDSArgs(payment, nonce)
 	args.Count = 1
 	return confirmedRDS(args, upfront, currency)
 }
@@ -34,31 +44,37 @@ func guardRDSArgs(nonce string, upfront *float64, currency string) rdsRIPurchase
 // approved-upfront check (go#611): approved 1000 allows an offering up to
 // 1050.00 (+5%); 1050.01 is refused before any purchase call.
 func TestRDSUpfrontGuardBoundaryOnRealClient(t *testing.T) {
-	for _, tc := range []struct {
-		name    string
-		wantErr string
-		price   float64
-		buys    bool
-	}{
-		{"at approved", "", 1000, true},
-		{"at tolerance edge", "", 1050.00, true},
-		{"just above tolerance", "exceeds the approved upfront", 1050.01, false},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Setenv(EnvAuditLog, filepath.Join(t.TempDir(), "audit.jsonl"))
-			fake := allUpfrontRDSFake(tc.price)
-			_, resp, err := rdsToolWithFake(fake).handle(context.Background(), nil,
-				guardRDSArgs("guard-"+tc.name, floatPtr(1000), "USD"))
-			if tc.buys {
-				require.NoError(t, err)
-				assert.True(t, resp.Success)
-				assert.Equal(t, 1, fake.purchaseCalls)
-				return
-			}
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), tc.wantErr)
-			assert.Zero(t, fake.purchaseCalls, "a refused guard must never reach Purchase")
-		})
+	fakes := map[PaymentOption]func(float64) *fakeRDSAPI{
+		PaymentOptionAllUpfront:     allUpfrontRDSFake,
+		PaymentOptionPartialUpfront: partialUpfrontRDSFake,
+	}
+	for payment, newFake := range fakes {
+		for _, tc := range []struct {
+			name    string
+			wantErr string
+			price   float64
+			buys    bool
+		}{
+			{"at approved", "", 1000, true},
+			{"at tolerance edge", "", 1050.00, true},
+			{"just above tolerance", "exceeds the approved upfront", 1050.01, false},
+		} {
+			t.Run(string(payment)+"/"+tc.name, func(t *testing.T) {
+				t.Setenv(EnvAuditLog, filepath.Join(t.TempDir(), "audit.jsonl"))
+				fake := newFake(tc.price)
+				_, resp, err := rdsToolWithFake(fake).handle(context.Background(), nil,
+					guardRDSArgs(payment, "guard-"+string(payment)+tc.name, floatPtr(1000), "USD"))
+				if tc.buys {
+					require.NoError(t, err)
+					assert.True(t, resp.Success)
+					assert.Equal(t, 1, fake.purchaseCalls)
+					return
+				}
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tc.wantErr)
+				assert.Zero(t, fake.purchaseCalls, "a refused guard must never reach Purchase")
+			})
+		}
 	}
 }
 
@@ -89,7 +105,7 @@ func TestRDSUpfrontUnusableFiguresNeverReachClient(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			fake := allUpfrontRDSFake(1000)
-			_, _, err := rdsToolWithFake(fake).handle(context.Background(), nil, guardRDSArgs("unusable-"+name, tc.upfront, tc.currency))
+			_, _, err := rdsToolWithFake(fake).handle(context.Background(), nil, guardRDSArgs(PaymentOptionAllUpfront, "unusable-"+name, tc.upfront, tc.currency))
 			require.Error(t, err)
 			assert.Zero(t, fake.describeCalls+fake.purchaseCalls)
 		})

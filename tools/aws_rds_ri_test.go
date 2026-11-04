@@ -112,7 +112,7 @@ func TestAWSRDSRIPurchaseHandleConfirmFalseRefuses(t *testing.T) {
 	assert.Contains(t, err.Error(), "confirm=true")
 }
 
-func TestAWSRDSRIPurchaseHandleDryRunNeverCallsProvider(t *testing.T) {
+func TestAWSRDSRIPurchaseHandleNoUpfrontDryRunNeverCallsProvider(t *testing.T) {
 	t.Parallel()
 	resolveCalled := false
 	tool := &awsRDSRIPurchaseTool{

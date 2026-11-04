@@ -2,8 +2,10 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -214,6 +216,36 @@ func TestSimpleAWSRIPurchaseHandleRealPurchaseCallsCorrectService(t *testing.T) 
 			assert.True(t, resp.Success)
 			assert.Equal(t, tool.spec.service, gotService)
 			assert.Equal(t, common.PurchaseSourceMCP, fake.lastOpts.Source)
+		})
+	}
+}
+
+func TestSimpleAWSRIPurchaseRegisteredSchemaPinsApprovedCurrencyUSD(t *testing.T) {
+	t.Parallel()
+	for product, ctor := range simpleToolConstructors() {
+		t.Run(product, func(t *testing.T) {
+			srv := mcp.NewServer(&mcp.Implementation{Name: "t", Version: "0"}, nil)
+			require.NoError(t, ctor().Register(srv))
+			ct, st := mcp.NewInMemoryTransports()
+			ctx := context.Background()
+			ss, err := srv.Connect(ctx, st, nil)
+			require.NoError(t, err)
+			defer ss.Close()
+			cs, err := mcp.NewClient(&mcp.Implementation{Name: "c", Version: "0"}, nil).Connect(ctx, ct, nil)
+			require.NoError(t, err)
+			defer cs.Close()
+			list, err := cs.ListTools(ctx, nil)
+			require.NoError(t, err)
+			require.Len(t, list.Tools, 1)
+			raw, err := json.Marshal(list.Tools[0].InputSchema)
+			require.NoError(t, err)
+			var parsed struct {
+				Properties map[string]struct {
+					Enum []any `json:"enum"`
+				} `json:"properties"`
+			}
+			require.NoError(t, json.Unmarshal(raw, &parsed))
+			assert.Equal(t, []any{"USD"}, parsed.Properties["approved_currency"].Enum)
 		})
 	}
 }

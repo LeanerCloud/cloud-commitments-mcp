@@ -111,6 +111,10 @@ func guardOpenSearch(payment PaymentOption, fixedPrice float64) guardService {
 		FixedPrice: aws.Float64(fixedPrice), CurrencyCode: aws.String("USD"),
 		PaymentOption: ostypes.ReservedInstancePaymentOptionAllUpfront,
 	}
+	if payment == PaymentOptionPartialUpfront {
+		o.PaymentOption = ostypes.ReservedInstancePaymentOptionPartialUpfront
+		o.RecurringCharges = []ostypes.RecurringCharge{{RecurringChargeAmount: aws.Float64(0.05), RecurringChargeFrequency: aws.String("Hourly")}}
+	}
 	if payment == PaymentOptionNoUpfront {
 		o.PaymentOption = ostypes.ReservedInstancePaymentOptionNoUpfront
 		o.RecurringCharges = []ostypes.RecurringCharge{{RecurringChargeAmount: aws.Float64(0.05), RecurringChargeFrequency: aws.String("Hourly")}}
@@ -128,6 +132,9 @@ func guardRedshift(payment PaymentOption, fixedPrice float64) guardService {
 		ReservedNodeOfferingType: rstypes.ReservedNodeOfferingTypeRegular,
 		FixedPrice:               aws.Float64(fixedPrice), CurrencyCode: aws.String("USD"),
 	}
+	if payment == PaymentOptionPartialUpfront {
+		o.RecurringCharges = []rstypes.RecurringCharge{{RecurringChargeAmount: aws.Float64(0.05), RecurringChargeFrequency: aws.String("Hourly")}}
+	}
 	if payment == PaymentOptionNoUpfront {
 		o.FixedPrice = aws.Float64(0)
 		o.RecurringCharges = []rstypes.RecurringCharge{{RecurringChargeAmount: aws.Float64(0.05), RecurringChargeFrequency: aws.String("Hourly")}}
@@ -142,6 +149,10 @@ func guardMemoryDBIn(region string, payment PaymentOption, fixedPrice float64) g
 	o := mdbtypes.ReservedNodesOffering{
 		ReservedNodesOfferingId: aws.String("off-mdb"), NodeType: aws.String("r6g.large"), Duration: guardOneYearSeconds,
 		OfferingType: aws.String("All Upfront"), FixedPrice: fixedPrice,
+	}
+	if payment == PaymentOptionPartialUpfront {
+		o.OfferingType = aws.String("Partial Upfront")
+		o.RecurringCharges = []mdbtypes.RecurringCharge{{RecurringChargeAmount: 0.05, RecurringChargeFrequency: aws.String("Hourly")}}
 	}
 	if payment == PaymentOptionNoUpfront {
 		o.OfferingType = aws.String("No Upfront")
@@ -179,31 +190,33 @@ func guardEnv(t *testing.T) {
 
 func TestSimpleUpfrontGuardBoundaryOnRealClients(t *testing.T) {
 	for product, build := range guardServices {
-		for _, tc := range []struct {
-			name  string
-			price float64
-			buys  bool
-		}{
-			{"at approved", 1000, true},
-			{"at tolerance edge", 1050.00, true},
-			{"just above tolerance", 1050.01, false},
-		} {
-			t.Run(product+"/"+tc.name, func(t *testing.T) {
-				guardEnv(t)
-				svc := build(PaymentOptionAllUpfront, tc.price)
-				tool, _ := simpleToolOver(svc.ctor, svc.client)
-				_, resp, err := tool.handle(context.Background(), nil,
-					guardArgs("guard-"+product+tc.name, PaymentOptionAllUpfront, floatPtr(1000), "USD"))
-				if tc.buys {
-					require.NoError(t, err)
-					assert.True(t, resp.Success)
-					assert.Equal(t, 1, svc.history())
-					return
-				}
-				require.Error(t, err)
-				assert.Contains(t, err.Error(), "exceeds the approved upfront")
-				assert.Zero(t, svc.history(), "a refused guard must never reach Purchase")
-			})
+		for _, payment := range []PaymentOption{PaymentOptionAllUpfront, PaymentOptionPartialUpfront} {
+			for _, tc := range []struct {
+				name  string
+				price float64
+				buys  bool
+			}{
+				{"at approved", 1000, true},
+				{"at tolerance edge", 1050.00, true},
+				{"just above tolerance", 1050.01, false},
+			} {
+				t.Run(product+"/"+string(payment)+"/"+tc.name, func(t *testing.T) {
+					guardEnv(t)
+					svc := build(payment, tc.price)
+					tool, _ := simpleToolOver(svc.ctor, svc.client)
+					_, resp, err := tool.handle(context.Background(), nil,
+						guardArgs("guard-"+product+string(payment)+tc.name, payment, floatPtr(1000), "USD"))
+					if tc.buys {
+						require.NoError(t, err)
+						assert.True(t, resp.Success)
+						assert.Equal(t, 1, svc.history())
+						return
+					}
+					require.Error(t, err)
+					assert.Contains(t, err.Error(), "exceeds the approved upfront")
+					assert.Zero(t, svc.history(), "a refused guard must never reach Purchase")
+				})
+			}
 		}
 	}
 }
