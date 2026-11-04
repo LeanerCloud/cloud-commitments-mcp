@@ -122,7 +122,7 @@ func pinAuditEnv(t *testing.T) string {
 // in its own audit file, then the failing scenario in another, and requires
 // exactly one error record that differs from the baseline only in timestamp,
 // status and error_message.
-func requireErrorPreviewMatchesSuccess(t *testing.T, run upfrontAuditRun, failing upfrontAuditScenario) map[string]any {
+func requireErrorPreviewMatchesSuccess(t *testing.T, run upfrontAuditRun, failing upfrontAuditScenario) {
 	t.Helper()
 	basePath := pinAuditEnv(t)
 	purchases, err := run(t, scenarioPreviewOK)
@@ -147,7 +147,6 @@ func requireErrorPreviewMatchesSuccess(t *testing.T, run upfrontAuditRun, failin
 		delete(want, k)
 	}
 	assert.Equal(t, want, got, "only status and error_message differ from a successful preview")
-	return recs[0]
 }
 
 // Not parallel: t.Setenv pins the audit log and Redshift's budget state.
