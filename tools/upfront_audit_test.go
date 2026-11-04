@@ -108,71 +108,80 @@ func auditRecords(t *testing.T, path string) []map[string]any {
 	return out
 }
 
+// pinAuditEnv points the audit log and Redshift's budget state at fresh temp
+// files and returns the audit path. Not for parallel tests (t.Setenv).
+func pinAuditEnv(t *testing.T) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "audit.jsonl")
+	t.Setenv(EnvAuditLog, path)
+	t.Setenv(EnvBudgetState, filepath.Join(t.TempDir(), "budget.json"))
+	return path
+}
+
+// requireErrorPreviewMatchesSuccess runs the successful preview as a baseline
+// in its own audit file, then the failing scenario in another, and requires
+// exactly one error record that differs from the baseline only in timestamp,
+// status and error_message.
+func requireErrorPreviewMatchesSuccess(t *testing.T, run upfrontAuditRun, failing upfrontAuditScenario) map[string]any {
+	t.Helper()
+	basePath := pinAuditEnv(t)
+	purchases, err := run(t, scenarioPreviewOK)
+	require.NoError(t, err)
+	assert.Zero(t, purchases)
+	baseline := auditRecords(t, basePath)
+	require.Len(t, baseline, 1)
+
+	path := pinAuditEnv(t)
+	purchases, err = run(t, failing)
+	require.Error(t, err)
+	assert.Zero(t, purchases, "a dry run must never buy")
+	recs := auditRecords(t, path)
+	require.Len(t, recs, 1, "README: every purchase attempt, previews included, writes an audit record")
+	got := recs[0]
+	assert.Equal(t, auditStatusError, got["status"])
+	assert.Equal(t, true, got["dry_run"])
+	assert.NotEmpty(t, got["error_message"])
+	want := baseline[0]
+	for _, k := range []string{"timestamp", "status", "error_message"} {
+		delete(got, k)
+		delete(want, k)
+	}
+	assert.Equal(t, want, got, "only status and error_message differ from a successful preview")
+	return recs[0]
+}
+
 // Not parallel: t.Setenv pins the audit log and Redshift's budget state.
 func TestUpfrontAuditRecords(t *testing.T) {
 	for name, run := range upfrontAuditTools() {
-		// previewRecord is the successful-preview record, the baseline the
-		// failed-pricing record must match except for status and error.
-		var previewRecord map[string]any
-		pin := func(t *testing.T) string {
-			path := filepath.Join(t.TempDir(), "audit.jsonl")
-			t.Setenv(EnvAuditLog, path)
-			t.Setenv(EnvBudgetState, filepath.Join(t.TempDir(), "budget.json"))
-			return path
-		}
-
 		t.Run(name+"/successful preview writes one record", func(t *testing.T) {
-			path := pin(t)
+			path := pinAuditEnv(t)
 			purchases, err := run(t, scenarioPreviewOK)
 			require.NoError(t, err)
 			assert.Zero(t, purchases)
-			recs := auditRecords(t, path)
-			require.Len(t, recs, 1)
-			previewRecord = recs[0]
-		})
-
-		t.Run(name+"/failed preview pricing writes one error record", func(t *testing.T) {
-			path := pin(t)
-			purchases, err := run(t, scenarioPreviewPricingFails)
-			require.Error(t, err)
-			assert.Zero(t, purchases, "a dry run must never buy")
-			recs := auditRecords(t, path)
-			require.Len(t, recs, 1, "README: every purchase attempt, previews included, writes an audit record")
-			got := recs[0]
-			assert.Equal(t, auditStatusError, got["status"])
-			assert.Equal(t, true, got["dry_run"])
-			assert.Contains(t, got["error_message"], errPricingDown.Error())
-			if previewRecord != nil {
-				for _, k := range []string{"timestamp", "status", "error_message"} {
-					delete(got, k)
-					delete(previewRecord, k)
-				}
-				assert.Equal(t, previewRecord, got, "only status and error_message differ from a successful preview")
-			}
-		})
-
-		t.Run(name+"/quote rejected writes one error record", func(t *testing.T) {
-			path := pin(t)
-			purchases, err := run(t, scenarioQuoteRejected)
-			require.Error(t, err)
-			assert.Zero(t, purchases)
-			recs := auditRecords(t, path)
-			require.Len(t, recs, 1)
-			assert.Equal(t, auditStatusError, recs[0]["status"])
-			assert.Equal(t, true, recs[0]["dry_run"])
-			assert.NotEmpty(t, recs[0]["error_message"])
-		})
-
-		t.Run(name+"/real purchase writes one record", func(t *testing.T) {
-			path := pin(t)
-			purchases, err := run(t, scenarioRealPurchase)
-			require.NoError(t, err)
-			assert.Equal(t, 1, purchases)
 			require.Len(t, auditRecords(t, path), 1)
 		})
 
+		t.Run(name+"/failed preview pricing writes one error record", func(t *testing.T) {
+			requireErrorPreviewMatchesSuccess(t, run, scenarioPreviewPricingFails)
+		})
+
+		t.Run(name+"/quote rejected writes one error record", func(t *testing.T) {
+			requireErrorPreviewMatchesSuccess(t, run, scenarioQuoteRejected)
+		})
+
+		t.Run(name+"/real purchase writes one record", func(t *testing.T) {
+			path := pinAuditEnv(t)
+			purchases, err := run(t, scenarioRealPurchase)
+			require.NoError(t, err)
+			assert.Equal(t, 1, purchases)
+			recs := auditRecords(t, path)
+			require.Len(t, recs, 1)
+			assert.Equal(t, auditStatusSuccess, recs[0]["status"])
+			assert.Equal(t, false, recs[0]["dry_run"])
+		})
+
 		t.Run(name+"/confirmed purchase without figures writes nothing", func(t *testing.T) {
-			path := pin(t)
+			path := pinAuditEnv(t)
 			purchases, err := run(t, scenarioConfirmedMissingFigures)
 			require.Error(t, err)
 			assert.Zero(t, purchases)
