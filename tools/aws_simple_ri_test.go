@@ -163,7 +163,7 @@ func TestSimpleAWSRIPurchaseHandleConfirmFalseRefuses(t *testing.T) {
 	}
 }
 
-func TestSimpleAWSRIPurchaseHandleDryRunNeverCallsProvider(t *testing.T) {
+func TestSimpleAWSRIPurchaseHandleNoUpfrontDryRunNeverCallsProvider(t *testing.T) {
 	t.Parallel()
 	for product, ctor := range simpleToolConstructors() {
 		t.Run(product, func(t *testing.T) {
