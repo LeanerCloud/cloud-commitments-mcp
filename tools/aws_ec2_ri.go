@@ -87,7 +87,7 @@ func (t *awsEC2RIPurchaseTool) Register(s *mcp.Server) error {
 		"scope":             {Enum: []any{string(ScopeRegion), string(ScopeAvailabilityZone)}, Default: string(ScopeRegion)},
 		"offering_class":    {Enum: []any{string(OfferingClassStandard), string(OfferingClassConvertible)}, Default: string(OfferingClassConvertible)},
 		"tenancy":           {Enum: []any{string(TenancyDefault), string(TenancyDedicated)}, Default: string(TenancyDefault)},
-		"approved_currency": {Enum: []any{ec2ApprovedCurrency}},
+		"approved_currency": {Enum: []any{approvedCurrency}},
 		"dry_run":           {Default: true},
 		"confirm":           {Default: false},
 	})
