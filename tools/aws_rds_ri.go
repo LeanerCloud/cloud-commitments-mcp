@@ -99,19 +99,28 @@ func (t *awsRDSRIPurchaseTool) handle(ctx context.Context, _ *mcp.CallToolReques
 		return nil, PurchaseResponse{}, err
 	}
 
+	resolve := t.resolveClient(args, region)
+	req := PurchaseRequest{
+		Region:          region,
+		Recommendation:  rec,
+		DryRun:          dryRun,
+		Confirm:         confirm,
+		ResolveClient:   resolve,
+		Nonce:           args.IdempotencyNonce,
+		CredentialScope: requestCredentialScope(args.AWSProfile, dryRun, "AWS_PROFILE"),
+	}
 	// A confirmed upfront purchase carries the dry run's figure into
-	// rec.CommitmentCost so the provider's go#611 price guard runs.
-	err = applyApprovedFigures(&rec, args.ApprovedUpfront, args.ApprovedCurrency, "RDS", !dryRun && confirm)
+	// the recommendation so the provider's go#611 price guard runs.
+	err = applyApprovedFigures(&req.Recommendation, args.ApprovedUpfront, args.ApprovedCurrency, "RDS", !dryRun && confirm)
 	if err != nil {
 		return nil, PurchaseResponse{}, err
 	}
-	resolve := t.resolveClient(args, region)
-	quote, err := previewUpfrontQuote(ctx, rec, dryRun, "RDS", func(ctx context.Context) (*common.OfferingDetails, error) {
+	quote, err := previewUpfrontQuote(ctx, &req, "RDS", func(ctx context.Context) (*common.OfferingDetails, error) {
 		client, resolveErr := resolve(ctx)
 		if resolveErr != nil {
 			return nil, fmt.Errorf("dry run: resolve the AWS RDS client to price the offering: %w", resolveErr)
 		}
-		od, priceErr := client.GetOfferingDetails(ctx, rec)
+		od, priceErr := client.GetOfferingDetails(ctx, req.Recommendation)
 		if priceErr != nil {
 			return nil, fmt.Errorf("dry run: cannot fetch the RDS offering's upfront price: %w", priceErr)
 		}
@@ -121,15 +130,7 @@ func (t *awsRDSRIPurchaseTool) handle(ctx context.Context, _ *mcp.CallToolReques
 		return nil, PurchaseResponse{}, err
 	}
 
-	resp, err := ExecutePurchase(ctx, PurchaseRequest{
-		Region:          region,
-		Recommendation:  rec,
-		DryRun:          dryRun,
-		Confirm:         confirm,
-		ResolveClient:   resolve,
-		Nonce:           args.IdempotencyNonce,
-		CredentialScope: requestCredentialScope(args.AWSProfile, dryRun, "AWS_PROFILE"),
-	})
+	resp, err := ExecutePurchase(ctx, req)
 	if err != nil {
 		return nil, PurchaseResponse{}, err
 	}

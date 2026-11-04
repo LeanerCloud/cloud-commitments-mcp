@@ -112,23 +112,12 @@ func (t *awsEC2RIPurchaseTool) handle(ctx context.Context, _ *mcp.CallToolReques
 	if err != nil {
 		return nil, PurchaseResponse{}, err
 	}
-	// A confirmed upfront purchase carries the dry run's figure into
-	// rec.CommitmentCost so the provider's go#611 price guard runs.
-	err = applyApprovedUpfront(&rec, args, !dryRun && confirm)
-	if err != nil {
-		return nil, PurchaseResponse{}, err
-	}
-	quote, err := t.previewUpfront(ctx, args, region, rec, string(offeringClass), dryRun)
-	if err != nil {
-		return nil, PurchaseResponse{}, err
-	}
 	// The audit record has no offering-class field, so record it in the raw
 	// request payload alongside the other purchase parameters.
 	if rec.RawRecommendation, err = json.Marshal(map[string]string{"offering_class": string(offeringClass)}); err != nil {
 		return nil, PurchaseResponse{}, fmt.Errorf("encode offering_class for audit: %w", err)
 	}
-
-	resp, err := ExecutePurchase(ctx, PurchaseRequest{
+	req := PurchaseRequest{
 		Region:          region,
 		Recommendation:  rec,
 		DryRun:          dryRun,
@@ -137,7 +126,19 @@ func (t *awsEC2RIPurchaseTool) handle(ctx context.Context, _ *mcp.CallToolReques
 		Nonce:           args.IdempotencyNonce,
 		OfferingClass:   string(offeringClass),
 		CredentialScope: requestCredentialScope(args.AWSProfile, dryRun, "AWS_PROFILE"),
-	})
+	}
+	// A confirmed upfront purchase carries the dry run's figure into
+	// the recommendation so the provider's go#611 price guard runs.
+	err = applyApprovedUpfront(&req.Recommendation, args, !dryRun && confirm)
+	if err != nil {
+		return nil, PurchaseResponse{}, err
+	}
+	quote, err := t.previewUpfront(ctx, args, region, &req, string(offeringClass))
+	if err != nil {
+		return nil, PurchaseResponse{}, err
+	}
+
+	resp, err := ExecutePurchase(ctx, req)
 	if err != nil {
 		return nil, PurchaseResponse{}, err
 	}
