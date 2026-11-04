@@ -254,6 +254,6 @@ func TestMemoryDBUpfrontDryRunFailsOutsideUSDRegions(t *testing.T) {
 	args.Region, args.Count, args.ResourceType = "cn-north-1", 1, "r6g.large"
 	_, _, err := tool.handle(context.Background(), nil, args)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "MemoryDB")
+	assert.Contains(t, err.Error(), "not billed in USD")
 	assert.Zero(t, svc.history())
 }

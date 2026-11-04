@@ -17,8 +17,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 - `cudly_aws_rds_ri_purchase`, `cudly_aws_opensearch_ri_purchase`,
   `cudly_aws_redshift_ri_purchase` and `cudly_aws_memorydb_ri_purchase` follow
   the same `approved_upfront`/`approved_currency` flow for `partial-upfront` and
-  `all-upfront` (mcp#125); their dry run no longer claims to never contact AWS
-  when it prices an upfront offering. Real upfront audit records for these
+  `all-upfront` (mcp#125); their upfront dry run looks up the offering
+  (read-only, needs credentials) and no longer claims to never contact AWS. Real upfront audit records for these
   services carry the approved upfront in `estimated_cost`.
   `cudly_aws_elasticache_ri_purchase` is unchanged (no provider guard).
 - Every real purchase passes `PurchaseOptions.RequestedAt`, the first-dispatch
