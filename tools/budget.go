@@ -16,8 +16,8 @@ import (
 // clients, and cannot see purchases made elsewhere.
 type budgetLedger struct {
 	mu        sync.Mutex
-	committed float64 // USD of purchases that were, or may have been, made
-	reserved  float64 // USD of purchases in flight
+	committed usdCents // purchases that were, or may have been, made
+	reserved  usdCents // purchases in flight
 }
 
 var processBudget = &budgetLedger{}
@@ -49,17 +49,35 @@ type budgetReservation struct {
 	ledger    *budgetLedger // in-memory mode
 	file      *fileBudget   // persisted mode (EnvBudgetState)
 	id        string        // file mode: reservation ID in the state file
-	usd       float64
-	committed float64 // USD settled before this reservation, for logging
+	usd       usdCents
+	committed usdCents // settled before this reservation, for logging
+}
+
+// budgetCents converts a purchase's USD total and the budget limit for the
+// ledgers (spend rounds up, the limit down; see spendCents).
+func budgetCents(usd, limit float64) (spend, lim usdCents, err error) {
+	spend, err = spendCents(usd)
+	if err != nil {
+		return 0, 0, fmt.Errorf("refusing real purchase: purchase total: %w", err)
+	}
+	lim, err = limitCents(limit)
+	if err != nil {
+		return 0, 0, fmt.Errorf("refusing real purchase: %s: %w", EnvBudgetUSD, err)
+	}
+	return spend, lim, nil
 }
 
 // reserve refuses when committed+reserved+usd would exceed limit (equal is
 // allowed) and otherwise holds usd until settle.
-func (l *budgetLedger) reserve(usd, limit float64) (*budgetReservation, error) {
+func (l *budgetLedger) reserve(usdF, limitF float64) (*budgetReservation, error) {
+	usd, limit, err := budgetCents(usdF, limitF)
+	if err != nil {
+		return nil, err
+	}
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if l.committed+l.reserved+usd > limit {
-		return nil, fmt.Errorf("refusing real purchase: %.2f USD would exceed the cumulative budget %s=%.2f (%.2f USD remaining; the budget is per process and resets on restart)",
+		return nil, fmt.Errorf("refusing real purchase: %s USD would exceed the cumulative budget %s=%s (%s USD remaining; the budget is per process and resets on restart)",
 			usd, EnvBudgetUSD, limit, max(0, limit-l.committed-l.reserved))
 	}
 	l.reserved += usd
@@ -83,7 +101,7 @@ func (r *budgetReservation) settle(spent bool) {
 func (l *budgetLedger) committedUSD() float64 {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	return l.committed
+	return float64(l.committed) / 100
 }
 
 // purchaseSpent reports whether a purchase that reached PurchaseCommitment
