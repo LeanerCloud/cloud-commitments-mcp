@@ -269,7 +269,17 @@ func fetchSearchCombos(
 			}
 			return nil, fmt.Errorf("get recommendations (term=%s, payment_option=%s): %w", combo.term, combo.payment, err)
 		}
-		recs = append(recs, got...)
+		for i := range got {
+			rec := &got[i]
+			// The library rounds fractional Cost Explorer quantities down
+			// (cloud-commitments-go#682), so a reservation can arrive with
+			// Count 0: it cannot be bought, so it is not offered. Savings Plans
+			// are sized by hourly commitment, not Count, and always stay.
+			if rec.CommitmentType != common.CommitmentSavingsPlan && rec.Count < 1 {
+				continue
+			}
+			recs = append(recs, *rec)
+		}
 	}
 	return recs, nil
 }

@@ -188,3 +188,45 @@ func TestSearchRecommendationsEmptyResultIsEmptySliceNotNull(t *testing.T) {
 	assert.NotNil(t, result.Recommendations)
 	assert.Empty(t, result.Recommendations)
 }
+
+// TestSearchRecommendationsDropsZeroCountReservations pins that a reservation
+// row whose recommended quantity rounded down to 0 (the library rounds
+// fractional Cost Explorer quantities down since cloud-commitments-go#682) is
+// not offered: it cannot be bought, and the purchase guard refuses Count 0.
+func TestSearchRecommendationsDropsZeroCountReservations(t *testing.T) {
+	t.Parallel()
+	recs := []common.Recommendation{
+		{Provider: common.ProviderAWS, ResourceType: "m5.large", Count: 0},
+		{Provider: common.ProviderAWS, ResourceType: "t4g.nano", Count: 1},
+	}
+	client := &fakeRecommendationsClient{recs: recs}
+	fp := &fakeProvider{name: "aws", services: []common.ServiceType{common.ServiceEC2}, recClient: client}
+	tool := newTestSearchTool(fp)
+
+	_, result, err := tool.handle(context.Background(), nil, searchRecommendationsArgs{
+		Provider: "aws", Service: "ec2", Region: "eu-west-1", TermYears: 1, PaymentOption: "no-upfront",
+	})
+
+	require.NoError(t, err)
+	require.Len(t, result.Recommendations, 1)
+	assert.Equal(t, "t4g.nano", result.Recommendations[0].ResourceType)
+	assert.Equal(t, 1, result.Count)
+}
+
+// TestSearchRecommendationsKeepsSavingsPlansRegardlessOfCount pins that the
+// zero-count filter never drops a Savings Plan: plans are sized by hourly
+// commitment, so their Count is not a purchase quantity.
+func TestSearchRecommendationsKeepsSavingsPlansRegardlessOfCount(t *testing.T) {
+	t.Parallel()
+	recs := []common.Recommendation{{Provider: common.ProviderAWS, CommitmentType: common.CommitmentSavingsPlan, Count: 0}}
+	client := &fakeRecommendationsClient{recs: recs}
+	fp := &fakeProvider{name: "aws", services: []common.ServiceType{common.ServiceSavingsPlansCompute}, recClient: client}
+	tool := newTestSearchTool(fp)
+
+	_, result, err := tool.handle(context.Background(), nil, searchRecommendationsArgs{
+		Provider: "aws", Service: "savings-plans-compute",
+	})
+
+	require.NoError(t, err)
+	assert.Len(t, result.Recommendations, 1)
+}
