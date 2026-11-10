@@ -222,6 +222,17 @@ These are pre-existing behaviours in the underlying purchase clients, not someth
 - **Rate limits / throttling from the cloud provider**: retry the same tool call with the same parameters -- the idempotency token guarantees a retry cannot double-purchase no matter how long you wait before retrying (see [Safety model](#safety-model)). If you genuinely want a second, separate purchase with the same parameters instead of a retry, pass a fresh `idempotency_nonce` value.
 - **"invalid ... must be one of ..." errors**: every enum-typed parameter (term, payment option, engine, az_config, sp_type, scope, tenancy, platform) is validated against an explicit allow-list; call `cudly_list_commitment_actions` or re-check this README's per-tool schema for the exact accepted values.
 
+## About
+
+Built by [LeanerCloud](https://leanercloud.com), a group of AWS cost
+optimization and FinOps specialists, also authors of [AutoSpotting](https://autospotting.io).
+
+Development is sponsored by [Archera](https://www.archera.ai/cudly), which
+funds it from insurance purchases made through that page. Archera can insure
+the Savings Plans, Reserved Instances and CUD purchases you make with this tool.
+
+If this tool saves you time and money, please give us a ⭐ so others can also find it.
+
 ## License and attribution
 
 CUDly is maintained by [LeanerCloud](https://github.com/LeanerCloud) and licensed under the [Open Software License 3.0](LICENSE). See the repository license and attribution files for third-party notices.
