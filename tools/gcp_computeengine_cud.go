@@ -29,6 +29,14 @@ const gcpComputeEngineCUDPurchaseDescription = "Purchase a GCP Compute Engine Co
 // site so the constraint is stated once, next to its rationale.
 const gcpPaymentOption = "monthly"
 
+// gcpProjectEnvVar names the project a real CUD purchase buys for when
+// gcp_project_id is omitted. It is CUDly-namespaced on purpose: GOOGLE_CLOUD_PROJECT
+// names the project a process runs in, and a hosting runtime may set it
+// implicitly. Only this tool reads it; providers/gcp still sees the value as
+// an explicit config.GCPProjectID, so the idempotency scope and the purchase
+// target always name the same project.
+const gcpProjectEnvVar = "CUDLY_GCP_PROJECT_ID"
+
 // gcpComputeEngineCUDPurchaseArgs is the input schema for
 // cudly_gcp_computeengine_cud_purchase. memory_gb is required: unlike AWS/
 // Azure, providers/gcp/services/computeengine/client.go's buildInsertRequest
@@ -40,7 +48,7 @@ type gcpComputeEngineCUDPurchaseArgs struct {
 	Confirm          *bool   `json:"confirm,omitempty" jsonschema:"required (with dry_run=false) to execute a real purchase; defaults to false"`
 	Region           string  `json:"region" jsonschema:"GCP region, e.g. us-central1"`
 	MachineType      string  `json:"machine_type" jsonschema:"GCP machine type family for the commitment, e.g. n2-standard-4"`
-	GCPProjectID     string  `json:"gcp_project_id,omitempty" jsonschema:"GCP project ID to buy for. Optional for a dry_run preview (the ambient project is used); REQUIRED for a real purchase (dry_run=false, confirm=true), which is refused without it because GCP has no ambient project variable that reliably names the target project"`
+	GCPProjectID     string  `json:"gcp_project_id,omitempty" jsonschema:"GCP project ID to buy for. Optional for a dry_run preview; a real purchase (dry_run=false, confirm=true) needs it here or CUDLY_GCP_PROJECT_ID set in the server environment, and is refused otherwise"`
 	IdempotencyNonce string  `json:"idempotency_nonce,omitempty" jsonschema:"optional; set to a fresh value to authorize a purchase that is otherwise identical to a previous one (e.g. buy 3 more RIs with the same parameters); leave empty (the default) so retries with identical parameters dedupe and never double-buy"`
 	VCPUCount        int     `json:"vcpu_count" jsonschema:"number of vCPUs to commit, must be > 0; real purchases are capped by the operator (CUDLY_MCP_MAX_COUNT)"`
 	MemoryGB         float64 `json:"memory_gb" jsonschema:"amount of memory (GB) to commit, must be > 0; real purchases are capped by the operator (CUDLY_MCP_MAX_MEMORY_GB)"`
@@ -97,37 +105,13 @@ func (t *gcpComputeEngineCUDPurchaseTool) handle(ctx context.Context, _ *mcp.Cal
 	}
 
 	resp, err := ExecutePurchase(ctx, PurchaseRequest{
-		Region:         region,
-		Recommendation: rec,
-		DryRun:         dryRun,
-		Confirm:        confirm,
-		ResolveClient:  t.resolveClient(args, region),
-		Nonce:          args.IdempotencyNonce,
-		// No ambient environment fallback here, deliberately, and unlike the
-		// AWS ("AWS_PROFILE") and Azure ("AZURE_SUBSCRIPTION_ID") tools. Do
-		// not "fix" this asymmetry by adding one: CredentialScope's contract
-		// is that its fallback names the SAME variable the provider factory
-		// itself consults, so that naming an account explicitly and letting
-		// it resolve ambiently derive the same idempotency token. GCP has no
-		// such variable. providers/gcp/provider.go's resolveGCPProjectID
-		// reads only config.GCPProjectID and the deprecated config.Profile,
-		// and when both are empty NewProvider falls through to
-		// getDefaultProject, which picks the first ACTIVE project returned by
-		// cloudresourcemanager's paginated ListProjects.
-		//
-		// Adding e.g. GOOGLE_CLOUD_PROJECT to this call alone would make the
-		// token LIE: the scope would read that variable while the purchase
-		// still landed in whatever project getDefaultProject resolved, so the
-		// same target reached two ways would derive two different tokens and
-		// double-buy. That is exactly the hazard requireCredentialScope
-		// exists to close. Teaching the factory to read it too would fix the
-		// divergence but change project selection for every other consumer of
-		// providers/gcp (CLI, web, scheduler), and GOOGLE_CLOUD_PROJECT
-		// conventionally names the project a process RUNS IN, not the one it
-		// should buy for, so on a hosted runtime that silently redirects
-		// purchases. Requiring gcp_project_id explicitly is the safe reading:
-		// it fails closed with a message naming the argument to pass.
-		CredentialScope: CredentialScope(args.GCPProjectID),
+		Region:          region,
+		Recommendation:  rec,
+		DryRun:          dryRun,
+		Confirm:         confirm,
+		ResolveClient:   t.resolveClient(args, region),
+		Nonce:           args.IdempotencyNonce,
+		CredentialScope: requestCredentialScope(args.GCPProjectID, dryRun, gcpProjectEnvVar),
 	})
 	if err != nil {
 		return nil, PurchaseResponse{}, err
@@ -196,7 +180,7 @@ func gcpComputeEngineRecommendationFromArgs(args gcpComputeEngineCUDPurchaseArgs
 // client against a raw, un-trimmed value.
 func (t *gcpComputeEngineCUDPurchaseTool) resolveClient(args gcpComputeEngineCUDPurchaseArgs, region string) ResolveClientFunc {
 	return func(ctx context.Context) (provider.ServiceClient, error) {
-		cfg := &provider.Config{Name: string(common.ProviderGCP), GCPProjectID: CredentialScope(args.GCPProjectID), Region: region}
+		cfg := &provider.Config{Name: string(common.ProviderGCP), GCPProjectID: CredentialScope(args.GCPProjectID, gcpProjectEnvVar), Region: region}
 		prov, err := t.createProvider(string(common.ProviderGCP), cfg)
 		if err != nil {
 			return nil, err

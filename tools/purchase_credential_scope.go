@@ -53,11 +53,12 @@ func requestCredentialScope(explicit string, dryRun bool, envVars ...string) str
 // from: the tool argument that supplies it, and the ambient environment
 // variable that can supply it instead, if the provider has one.
 //
-// envVar must name a variable the matching provider factory ITSELF consults,
-// so a scope inherited from the environment always identifies the account the
-// purchase really lands in. A variable the factory ignores would make the
-// token positively assert the wrong account -- worse than having no fallback,
-// which is why gcp has none (see credentialScopeSourceFor).
+// envVar must name a variable that the purchase's provider configuration
+// consumes (the matching factory itself for AWS and Azure, or the tool for
+// GCP, which passes it on as the explicit project), so a scope inherited from
+// the environment always identifies the account the purchase really lands in.
+// A variable nothing consumes would make the token positively assert the wrong
+// account (see credentialScopeSourceFor).
 type credentialScopeSource struct {
 	arg    string
 	envVar string
@@ -69,25 +70,11 @@ type credentialScopeSource struct {
 // provider added without an entry here would otherwise get a refusal it cannot
 // act on (feedback_no_silent_fallbacks).
 //
-// GCP deliberately has NO environment fallback, and this is a decision rather
-// than an omission -- do not "fix" it by adding one:
-//
-//   - Nothing in providers/gcp reads GOOGLE_CLOUD_PROJECT or
-//     CLOUDSDK_CORE_PROJECT, so adding either here would invent a convention
-//     the provider does not honor.
-//   - Worse, it would be unsafe. When no project is configured, the provider
-//     falls back to getDefaultProject (providers/gcp/provider.go), which
-//     returns the FIRST ACTIVE PROJECT in the caller's ListProjects response
-//     -- an artifact of IAM visibility and API ordering, not a project anyone
-//     declared. An env-supplied scope could therefore name project A while the
-//     purchase landed in project B, making the idempotency token assert an
-//     account it never touched. That is the aliasing hazard
-//     requireCredentialScope exists to remove, in a worse form.
-//
-// So a real GCP purchase must name gcp_project_id. That is a stated contract
-// (documented in README.md and in the tool's own schema), not an accident
-// of the gate: "whichever project happens to be listed first" is not a
-// defensible default for spending money.
+// GCP's variable is CUDly-namespaced (CUDLY_GCP_PROJECT_ID), not
+// GOOGLE_CLOUD_PROJECT: the provider factory does not read it, so the MCP tool
+// passes it to the provider as the explicit project, and the scope and the
+// purchase target stay one value. Do not point this at a variable a hosting
+// runtime sets implicitly.
 func credentialScopeSourceFor(p common.ProviderType) (credentialScopeSource, error) {
 	switch p {
 	case common.ProviderAWS:
@@ -95,7 +82,7 @@ func credentialScopeSourceFor(p common.ProviderType) (credentialScopeSource, err
 	case common.ProviderAzure:
 		return credentialScopeSource{arg: "azure_subscription_id", envVar: "AZURE_SUBSCRIPTION_ID"}, nil
 	case common.ProviderGCP:
-		return credentialScopeSource{arg: "gcp_project_id"}, nil
+		return credentialScopeSource{arg: "gcp_project_id", envVar: gcpProjectEnvVar}, nil
 	default:
 		return credentialScopeSource{}, fmt.Errorf("internal error: no credential-scope source defined for provider %q", p)
 	}
@@ -145,18 +132,6 @@ func requireCredentialScope(p common.ProviderType, scope string) error {
 	src, err := credentialScopeSourceFor(p)
 	if err != nil {
 		return err
-	}
-	// Providers with an ambient fallback get a "could not be determined"
-	// message naming both ways to supply it. GCP has none by design, so
-	// telling a caller their environment failed to provide something it never
-	// could would send them debugging the wrong thing; it gets a plain
-	// "required" instead.
-	if src.envVar == "" {
-		return fmt.Errorf("refusing real purchase: %s is required for a real %s purchase and was not supplied. "+
-			"There is no environment fallback: with no project named, the provider would spend in whichever "+
-			"project happens to be listed first for your credentials, and the idempotency token could not "+
-			"identify the account, so a retry might not dedupe and could purchase twice. Dry runs do not require it",
-			src.arg, p)
 	}
 	return fmt.Errorf("refusing real purchase: the target account could not be determined, so pass %s explicitly "+
 		"(or set %s). Leaving it to ambient credentials derives a different idempotency token than naming the "+

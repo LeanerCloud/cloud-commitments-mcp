@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -171,4 +172,64 @@ func TestGCPComputeEngineRecommendationSetsMonthlyPaymentOption(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "monthly", rec.PaymentOption,
 		"an empty payment option is read downstream as an upfront charge")
+}
+
+// TestGCPComputeEngineCUDResolveClientUsesProjectEnv pins that an omitted
+// gcp_project_id falls back to CUDLY_GCP_PROJECT_ID, handed to the provider as
+// the explicit project so providers/gcp never reaches getDefaultProject.
+// Not parallel: t.Setenv.
+func TestGCPComputeEngineCUDResolveClientUsesProjectEnv(t *testing.T) {
+	t.Setenv(gcpProjectEnvVar, "proj-env")
+	var gotProject string
+	tool := &gcpComputeEngineCUDPurchaseTool{
+		createProvider: func(_ string, cfg *provider.Config) (provider.Provider, error) {
+			gotProject = cfg.GCPProjectID
+			return nil, errors.New("stop after capturing config")
+		},
+	}
+	args := validGCPCUDArgs()
+	args.GCPProjectID = ""
+
+	_, err := tool.resolveClient(args, "us-central1")(context.Background())
+	require.Error(t, err)
+	assert.Equal(t, "proj-env", gotProject)
+}
+
+// TestGCPComputeEngineCUDAmbientAndExplicitProjectDedupe is the invariant that
+// makes the environment fallback safe: naming the project explicitly and
+// inheriting it from CUDLY_GCP_PROJECT_ID must yield one idempotency token and
+// one provider project, so a retry in either form dedupes. Not parallel: t.Setenv.
+func TestGCPComputeEngineCUDAmbientAndExplicitProjectDedupe(t *testing.T) {
+	t.Setenv(gcpProjectEnvVar, "proj-a")
+	purchase := func(explicit string) (*fakeServiceClient, string) {
+		fake := &fakeServiceClient{purchaseResult: common.PurchaseResult{Success: true}}
+		var gotProject string
+		tool := &gcpComputeEngineCUDPurchaseTool{
+			createProvider: func(_ string, cfg *provider.Config) (provider.Provider, error) {
+				gotProject = cfg.GCPProjectID
+				return &recordingProvider{
+					fakeProvider: &fakeProvider{name: "gcp"},
+					client:       fake,
+					gotService:   new(common.ServiceType),
+					gotRegion:    new(string),
+				}, nil
+			},
+		}
+		args := validGCPCUDArgs()
+		args.GCPProjectID = explicit
+		args.DryRun = boolPtr(false)
+		args.Confirm = boolPtr(true)
+		_, _, err := tool.handle(context.Background(), nil, args)
+		require.NoError(t, err)
+		return fake, gotProject
+	}
+
+	explicit, explicitProject := purchase("proj-a")
+	ambient, ambientProject := purchase("")
+
+	assert.Equal(t, "proj-a", explicitProject)
+	assert.Equal(t, "proj-a", ambientProject)
+	require.NotEmpty(t, explicit.lastOpts.IdempotencyToken)
+	assert.Equal(t, explicit.lastOpts.IdempotencyToken, ambient.lastOpts.IdempotencyToken,
+		"explicit and ambient resolution of the same project must derive one token")
 }
