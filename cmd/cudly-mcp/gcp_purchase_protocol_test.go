@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"sync/atomic"
 	"testing"
@@ -103,36 +104,27 @@ func (p *fakeGCPProvider) GetServiceClient(ctx context.Context, service common.S
 		return nil, err
 	}
 	client.SetCommitmentsService(p.commitmentsService)
-	return client, nil
+	return &pricedComputeEngineClient{Client: client}, nil
+}
+
+// pricedComputeEngineClient stubs the Billing API lookup the USD cap makes,
+// so no test reaches the network. TotalCost is the whole commitment.
+type pricedComputeEngineClient struct {
+	*computeengine.Client
+}
+
+func (c *pricedComputeEngineClient) GetOfferingDetails(_ context.Context, _ common.Recommendation) (*common.OfferingDetails, error) {
+	return &common.OfferingDetails{TotalCost: 1000, Currency: "USD"}, nil
 }
 
 func (p *fakeGCPProvider) GetRecommendationsClient(_ context.Context) (provider.RecommendationsClient, error) {
 	return nil, errors.New("fakeGCPProvider: GetRecommendationsClient not implemented")
 }
 
-// TestGCPComputeEngineCUDPurchaseStructuredCost is the protocol-level
-// acceptance guard for issue #35: a REAL (dry_run=false, confirm=true,
-// operator-authorized) cudly_gcp_computeengine_cud_purchase driven over the
-// MCP transport must succeed end-to-end and report an explicit zero cost in
-// its structured output. It follows the in-process pattern of
-// TestRealPurchasePastProviderRegistration (NewServer + in-memory transports
-// + CallTool), but injects a fake gcp provider factory into the global
-// registry so the call goes through the library's real computeengine client
-// against a fake CommitmentsService instead of GCP.
-//
-// Deliberately NOT claimed pin-sensitive: on the MCP path
-// gcpComputeEngineRecommendationFromArgs never sets CommitmentCost, so old
-// and new library pins both yield "cost":0 here. The pin-sensitive cost proof
-// lives at the library boundary (tools/gcp_computeengine_cud_safeguards_test.go).
-func TestGCPComputeEngineCUDPurchaseRefusedByUSDCap(t *testing.T) {
-	t.Setenv(tools.EnvEnableRealPurchases, "1")
-	t.Setenv(tools.EnvMaxCount, "1000")
-	t.Setenv(tools.EnvMaxHourlyCommitment, "1000")
-	t.Setenv(tools.EnvMaxMemoryGB, "1000")
-	t.Setenv(tools.EnvMaxCommitmentUSD, "1000000000")
-	t.Setenv(tools.EnvBudgetUSD, "1000000000000")
-	service := &fakeComputeEngineCommitmentsService{}
-
+// connectFakeGCP registers the fake gcp provider and returns a connected
+// in-memory MCP session; everything is torn down with the test.
+func connectFakeGCP(t *testing.T, service *fakeComputeEngineCommitmentsService) (*gosdk.ClientSession, context.Context) {
+	t.Helper()
 	provider.GetRegistry().Unregister("gcp")
 	err := provider.RegisterProvider("gcp", func(cfg *provider.Config) (provider.Provider, error) {
 		return &fakeGCPProvider{cfg: cfg, commitmentsService: service}, nil
@@ -153,7 +145,7 @@ func TestGCPComputeEngineCUDPurchaseRefusedByUSDCap(t *testing.T) {
 	clientTransport, serverTransport := gosdk.NewInMemoryTransports()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	t.Cleanup(cancel)
 
 	go func() {
 		_ = server.Run(ctx, serverTransport)
@@ -162,7 +154,35 @@ func TestGCPComputeEngineCUDPurchaseRefusedByUSDCap(t *testing.T) {
 	client := gosdk.NewClient(&gosdk.Implementation{Name: "test-client"}, nil)
 	session, err := client.Connect(ctx, clientTransport, nil)
 	require.NoError(t, err)
-	defer session.Close()
+	t.Cleanup(func() { _ = session.Close() })
+
+	return session, ctx
+}
+
+// TestGCPComputeEngineCUDPurchaseStructuredCost is the protocol-level
+// acceptance guard for issue #35: a REAL (dry_run=false, confirm=true,
+// operator-authorized) cudly_gcp_computeengine_cud_purchase driven over the
+// MCP transport must succeed end-to-end and report an explicit zero cost in
+// its structured output. It follows the in-process pattern of
+// TestRealPurchasePastProviderRegistration (NewServer + in-memory transports
+// + CallTool), but injects a fake gcp provider factory into the global
+// registry so the call goes through the library's real computeengine client
+// against a fake CommitmentsService instead of GCP.
+//
+// Deliberately NOT claimed pin-sensitive: on the MCP path
+// gcpComputeEngineRecommendationFromArgs never sets CommitmentCost, so old
+// and new library pins both yield "cost":0 here. The pin-sensitive cost proof
+// lives at the library boundary (tools/gcp_computeengine_cud_safeguards_test.go).
+func TestGCPComputeEngineCUDPurchaseStructuredCost(t *testing.T) {
+	t.Setenv(tools.EnvEnableRealPurchases, "1")
+	t.Setenv(tools.EnvMaxCount, "1000")
+	t.Setenv(tools.EnvMaxHourlyCommitment, "1000")
+	t.Setenv(tools.EnvMaxMemoryGB, "1000")
+	t.Setenv(tools.EnvMaxCommitmentUSD, "1000000000")
+	t.Setenv(tools.EnvBudgetUSD, "1000000000000")
+	service := &fakeComputeEngineCommitmentsService{}
+
+	session, ctx := connectFakeGCP(t, service)
 
 	// Assert registration through the protocol, not just the registry: the
 	// tool must be listed by the server this test drives.
@@ -191,10 +211,47 @@ func TestGCPComputeEngineCUDPurchaseRefusedByUSDCap(t *testing.T) {
 		},
 	})
 	require.NoError(t, err, "CallTool itself must not return a transport-level error")
-	// Real GCP CUD purchases are refused until USD totals exist (go#321).
-	require.True(t, result.IsError, "a real GCP CUD purchase must be refused: %+v", result.Content)
+	require.False(t, result.IsError, "a successful fake-backed purchase must not surface as a tool error: %+v", result.Content)
+	require.Equal(t, int32(1), service.insertCalls.Load())
+
+	require.NotNil(t, result.StructuredContent, "structured output must be present")
+	encoded, err := json.Marshal(result.StructuredContent)
+	require.NoError(t, err)
+	var structured map[string]any
+	require.NoError(t, json.Unmarshal(encoded, &structured))
+
+	assert.Equal(t, true, structured["success"], "purchase must report success, got %s", encoded)
+	assert.Equal(t, false, structured["dry_run"], "this was a real purchase, got %s", encoded)
+	// PurchaseResponse.Cost is a *float64 with omitempty: a known zero
+	// upfront charge must survive as an explicit "cost":0.
+	cost, present := structured["cost"]
+	require.True(t, present, "structured output must carry an explicit cost field, got %s", encoded)
+	assert.Equal(t, 0.0, cost, "a Compute Engine CUD has no upfront charge, got %s", encoded)
+}
+
+// Over the USD cap the call is refused before any Insert.
+func TestGCPComputeEngineCUDPurchaseOverUSDCapRefused(t *testing.T) {
+	t.Setenv(tools.EnvEnableRealPurchases, "1")
+	t.Setenv(tools.EnvMaxCount, "1000")
+	t.Setenv(tools.EnvMaxHourlyCommitment, "1000")
+	t.Setenv(tools.EnvMaxMemoryGB, "1000")
+	t.Setenv(tools.EnvMaxCommitmentUSD, "999")
+	t.Setenv(tools.EnvBudgetUSD, "1000000000000")
+	service := &fakeComputeEngineCommitmentsService{}
+	session, ctx := connectFakeGCP(t, service)
+
+	result, err := session.CallTool(ctx, &gosdk.CallToolParams{
+		Name: "cudly_gcp_computeengine_cud_purchase",
+		Arguments: map[string]any{
+			"region": "us-central1", "machine_type": "n2-standard-4", "vcpu_count": 4,
+			"memory_gb": 16, "term_years": 1, "gcp_project_id": "test-project",
+			"dry_run": false, "confirm": true,
+		},
+	})
+	require.NoError(t, err)
+	require.True(t, result.IsError)
 	text, ok := result.Content[0].(*gosdk.TextContent)
 	require.True(t, ok)
-	assert.Contains(t, text.Text, "go#321")
+	assert.Contains(t, text.Text, tools.EnvMaxCommitmentUSD)
 	require.Equal(t, int32(0), service.insertCalls.Load())
 }

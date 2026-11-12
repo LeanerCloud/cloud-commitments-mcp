@@ -47,7 +47,7 @@
         },
         {
           "name": "CUDLY_MCP_MAX_COMMITMENT_USD",
-          "description": "Positive number (USD). Per-call ceiling on the total USD one real purchase commits over its full term, priced by the provider just before buying. Required for any real purchase: unset, empty or invalid refuses it. USD only; purchases that cannot be priced (including real GCP CUD purchases for now) are refused. Not cumulative.",
+          "description": "Positive number (USD). Per-call ceiling on the total USD one real purchase commits over its full term, priced by the provider just before buying. Required for any real purchase: unset, empty or invalid refuses it. USD only; purchases that cannot be priced are refused. Not cumulative.",
           "isRequired": false,
           "isSecret": false,
           "format": "string"

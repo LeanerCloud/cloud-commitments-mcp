@@ -121,9 +121,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
   resolved. The MCPB bundle has a matching setting that must be filled in before any real purchase. Executing a
   purchase now also needs credentials and network access for the provider's
   offering lookup.
-- **Real GCP CUD purchases are refused** until the `cloud-commitments-go` pin
-  includes the CUD pricing fix (go#321), because their USD total cannot be
-  determined yet. Previews are unaffected.
+- Real GCP CUD purchases are checked against the USD cap again. The
+  `cloud-commitments-go` pin includes the CUD pricing fix (go#321), and the
+  provider's total is the whole commitment (vCPUs and memory), so it is not
+  multiplied by `vcpu_count`.
 
 - **Real purchases now require operator spend caps.** With
   `CUDLY_MCP_ENABLE_REAL_PURCHASES=1`, every real purchase is refused unless

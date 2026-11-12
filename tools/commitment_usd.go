@@ -20,11 +20,11 @@ import (
 // standard EC2 purchase is priced through classPricer instead, and refused if
 // the client cannot do that (never priced as convertible).
 func committedUSD(ctx context.Context, client provider.ServiceClient, rec common.Recommendation, offeringClass string) (float64, error) {
-	switch {
-	case rec.CommitmentType == common.CommitmentSavingsPlan:
+	if rec.CommitmentType == common.CommitmentSavingsPlan {
 		return savingsPlanUSD(rec)
-	case rec.Provider == common.ProviderGCP || rec.CommitmentType == common.CommitmentCUD:
-		return 0, errors.New("refusing real purchase: USD totals for GCP committed-use discounts are unavailable at the pinned cloud-commitments-go (go#321), so real GCP CUD purchases are refused")
+	}
+	if !isGCPCUD(rec) && (rec.Provider == common.ProviderGCP || rec.CommitmentType == common.CommitmentCUD) {
+		return 0, errors.New("refusing real purchase: cannot determine USD total: only GCP Compute Engine committed-use discounts can be priced")
 	}
 	var od *common.OfferingDetails
 	var err error
@@ -40,7 +40,16 @@ func committedUSD(ctx context.Context, client provider.ServiceClient, rec common
 	if err != nil {
 		return 0, fmt.Errorf("refusing real purchase: cannot determine USD total: %w", err)
 	}
+	if isGCPCUD(rec) {
+		// The provider prices the whole commitment from vCPUs (rec.Count)
+		// and memory, so scaling by count would double-count.
+		return unitOfferingUSD(od, 1)
+	}
 	return unitOfferingUSD(od, rec.Count)
+}
+
+func isGCPCUD(rec common.Recommendation) bool {
+	return rec.Provider == common.ProviderGCP && rec.Service == common.ServiceCompute
 }
 
 // classPricer is implemented by (*ec2.Client) since cloud-commitments-go#574.

@@ -73,12 +73,20 @@ func TestUSDCapEnvParsing(t *testing.T) {
 }
 
 // sequential: writes the shared EnvAuditLog file
-func TestUSDCapRefusesRealGCPCUDPurchase(t *testing.T) {
+func TestCommittedUSDGCPCUDIsWholeCommitment(t *testing.T) {
 	rec, _, _, _, err := gcpComputeEngineRecommendationFromArgs(validGCPCUDArgs())
 	require.NoError(t, err)
-	fake := &fakeServiceClient{}
-	_, err = runRealWith(fake, rec)
-	require.ErrorContains(t, err, "go#321")
-	assert.Zero(t, fake.purchaseCalls)
-	assert.Zero(t, fake.offeringCalls)
+	require.Greater(t, rec.Count, 1, "the fixture must have several vCPUs so a count multiplication would show")
+	fake := &fakeServiceClient{offering: &common.OfferingDetails{TotalCost: 500, Currency: "USD"}}
+
+	got, err := committedUSD(context.Background(), fake, rec, "")
+	require.NoError(t, err)
+	assert.InDelta(t, 500, got, 1e-9, "TotalCost is the whole commitment, not per vCPU")
+
+	t.Setenv(EnvMaxCommitmentUSD, "500")
+	total, err := enforceUSDCap(context.Background(), fake, rec, "", 500)
+	require.NoError(t, err)
+	assert.InDelta(t, 500, total, 1e-9)
+	_, err = enforceUSDCap(context.Background(), fake, rec, "", 499)
+	require.ErrorContains(t, err, EnvMaxCommitmentUSD)
 }

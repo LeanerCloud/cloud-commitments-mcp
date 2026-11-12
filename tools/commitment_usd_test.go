@@ -99,10 +99,10 @@ func TestCommittedUSDFailsClosed(t *testing.T) {
 		{err: nil, od: nil, name: "sp NaN hourly", rec: usdSPRec("1yr", &common.SavingsPlanDetails{HourlyCommitment: math.NaN()}), wantCalls: 0},
 		{err: nil, od: nil, name: "sp 2yr term", rec: usdSPRec("2yr", &common.SavingsPlanDetails{HourlyCommitment: 1}), wantCalls: 0},
 		{err: nil, od: nil, name: "sp empty term", rec: usdSPRec("", &common.SavingsPlanDetails{HourlyCommitment: 1}), wantCalls: 0},
-		{err: nil, od: usdOffering(1), name: "gcp provider with RI type", rec: common.Recommendation{Provider: common.ProviderGCP, Service: common.ServiceCompute, CommitmentType: common.CommitmentReservedInstance, Count: 1}, wantCalls: 0},
-		{err: nil, od: usdOffering(1), name: "gcp provider with empty type", rec: common.Recommendation{Provider: common.ProviderGCP, Service: common.ServiceCompute, Count: 1}, wantCalls: 0},
-		{err: nil, od: usdOffering(1), name: "gcp cud", rec: common.Recommendation{Provider: common.ProviderGCP, Service: common.ServiceCompute, CommitmentType: common.CommitmentCUD, Count: 1}, wantCalls: 0},
 		{err: nil, od: usdOffering(1), name: "cud on non-gcp provider", rec: common.Recommendation{Provider: common.ProviderAWS, CommitmentType: common.CommitmentCUD, Count: 1}, wantCalls: 0},
+		{err: nil, od: usdOffering(1), name: "gcp non-compute service", rec: common.Recommendation{Provider: common.ProviderGCP, Service: common.ServiceRDS, CommitmentType: common.CommitmentCUD, Count: 1}, wantCalls: 0},
+		{err: nil, od: usdOffering(0), name: "gcp cud zero total", rec: common.Recommendation{Provider: common.ProviderGCP, Service: common.ServiceCompute, CommitmentType: common.CommitmentCUD, Count: 1}, wantCalls: 1},
+		{err: nil, od: &common.OfferingDetails{TotalCost: 1, Currency: "EUR"}, name: "gcp cud EUR", rec: common.Recommendation{Provider: common.ProviderGCP, Service: common.ServiceCompute, CommitmentType: common.CommitmentCUD, Count: 1}, wantCalls: 1},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
