@@ -35,7 +35,7 @@ func committedUSD(ctx context.Context, client provider.ServiceClient, rec common
 		}
 		od, err = pricer.GetOfferingDetailsForClass(ctx, rec, offeringClass)
 	} else {
-		od, err = client.GetOfferingDetails(ctx, rec)
+		od, err = priceOffering(ctx, client, rec)
 	}
 	if err != nil {
 		return 0, fmt.Errorf("refusing real purchase: cannot determine USD total: %w", err)
@@ -50,6 +50,17 @@ func committedUSD(ctx context.Context, client provider.ServiceClient, rec common
 
 func isGCPCUD(rec common.Recommendation) bool {
 	return rec.Provider == common.ProviderGCP && rec.Service == common.ServiceCompute
+}
+
+// priceOffering prices rec through the optional provider.OfferingPricer path
+// and fails loud when the client does not implement it. client is any so the
+// non-pricer branch stays testable while ServiceClient still carries the method.
+func priceOffering(ctx context.Context, client any, rec common.Recommendation) (*common.OfferingDetails, error) {
+	pricer, ok := client.(provider.OfferingPricer)
+	if !ok {
+		return nil, fmt.Errorf("the %s client cannot price the offering (provider.OfferingPricer not implemented)", rec.Service)
+	}
+	return pricer.GetOfferingDetails(ctx, rec)
 }
 
 // classPricer is implemented by (*ec2.Client) since cloud-commitments-go#574.

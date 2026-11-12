@@ -180,7 +180,7 @@ func (t *simpleAWSRIPurchaseTool) handle(ctx context.Context, _ *mcp.CallToolReq
 		if resolveErr != nil {
 			return nil, fmt.Errorf("dry run: resolve the AWS %s client to price the offering: %w", label, resolveErr)
 		}
-		od, priceErr := client.GetOfferingDetails(ctx, req.Recommendation)
+		od, priceErr := priceOffering(ctx, client, req.Recommendation)
 		if priceErr != nil {
 			return nil, fmt.Errorf("dry run: cannot fetch the %s offering's upfront price: %w", label, priceErr)
 		}

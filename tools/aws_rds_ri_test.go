@@ -154,3 +154,22 @@ func TestAWSRDSRIPurchaseHandleRealPurchase(t *testing.T) {
 	assert.Equal(t, common.ServiceRDS, gotService)
 	assert.Equal(t, common.PurchaseSourceMCP, fake.lastOpts.Source)
 }
+
+func rdsToolWithClient(c provider.ServiceClient) *awsRDSRIPurchaseTool {
+	var svc common.ServiceType
+	return &awsRDSRIPurchaseTool{
+		createProvider: func(_ string, _ *provider.Config) (provider.Provider, error) {
+			return &recordingProvider{fakeProvider: &fakeProvider{name: "aws"}, client: c, gotService: &svc, gotRegion: new(string)}, nil
+		},
+	}
+}
+
+func TestAWSRDSRIPurchaseDryRunPricerCallsThrough(t *testing.T) {
+	args := validRDSArgs()
+	args.PaymentOption = "all-upfront"
+	c := &offeringClient{od: &common.OfferingDetails{UpfrontCost: 10, Currency: "USD"}}
+	_, resp, err := rdsToolWithClient(c).handle(context.Background(), nil, args)
+	require.NoError(t, err)
+	assert.Equal(t, 1, c.calls)
+	require.NotNil(t, resp.ApprovedUpfront)
+}

@@ -123,10 +123,11 @@ func cacheDetailsKey(d *common.CacheDetails) string {
 	return fmt.Sprintf("engine=%s;node_type=%s;shards=%d", d.Engine, d.NodeType, d.Shards)
 }
 
+// coverage= is kept empty so keys of already stored attempts stay stable (field is deprecated, never populated).
 func savingsPlanDetailsKey(d *common.SavingsPlanDetails) string {
 	if d == nil {
 		return ""
 	}
-	return fmt.Sprintf("plan_type=%s;hourly_commitment=%g;coverage=%s;instance_family=%s;region=%s;offering_id=%s",
-		d.PlanType, d.HourlyCommitment, d.Coverage, d.InstanceFamily, d.Region, d.OfferingID)
+	return fmt.Sprintf("plan_type=%s;hourly_commitment=%g;coverage=;instance_family=%s;region=%s;offering_id=%s",
+		d.PlanType, d.HourlyCommitment, d.InstanceFamily, d.Region, d.OfferingID)
 }

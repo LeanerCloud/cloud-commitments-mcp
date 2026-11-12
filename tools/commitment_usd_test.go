@@ -164,3 +164,18 @@ func TestUSDCapInvalidLimit(t *testing.T) {
 		assert.Zero(t, c.calls)
 	}
 }
+
+// bareClient has no GetOfferingDetails, so it is not a provider.OfferingPricer.
+type bareClient struct{}
+
+func TestPriceOffering_NonPricerFailsLoud(t *testing.T) {
+	_, err := priceOffering(context.Background(), bareClient{}, common.Recommendation{Service: common.ServiceRDS})
+	require.ErrorContains(t, err, "cannot price the offering")
+	require.ErrorContains(t, err, string(common.ServiceRDS))
+}
+
+func TestPriceOffering_PricerCallsThrough(t *testing.T) {
+	od, err := priceOffering(context.Background(), &offeringClient{od: usdOffering(5)}, common.Recommendation{})
+	require.NoError(t, err)
+	require.NotNil(t, od)
+}

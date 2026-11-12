@@ -249,3 +249,24 @@ func TestSimpleAWSRIPurchaseRegisteredSchemaPinsApprovedCurrencyUSD(t *testing.T
 		})
 	}
 }
+
+func TestSimpleAWSRIPurchaseDryRunPricerCallsThrough(t *testing.T) {
+	for product, ctor := range simpleToolConstructors() {
+		t.Run(product, func(t *testing.T) {
+			run := func(c provider.ServiceClient) (PurchaseResponse, error) {
+				tool := ctor().(*simpleAWSRIPurchaseTool)
+				var svc common.ServiceType
+				tool.createProvider = func(_ string, _ *provider.Config) (provider.Provider, error) {
+					return &recordingProvider{fakeProvider: &fakeProvider{name: "aws"}, client: c, gotService: &svc, gotRegion: new(string)}, nil
+				}
+				_, resp, err := tool.handle(context.Background(), nil, validSimpleArgs())
+				return resp, err
+			}
+			c := &offeringClient{od: &common.OfferingDetails{UpfrontCost: 10, Currency: "USD"}}
+			resp, err := run(c)
+			require.NoError(t, err)
+			assert.Equal(t, 1, c.calls)
+			require.NotNil(t, resp.ApprovedUpfront)
+		})
+	}
+}
