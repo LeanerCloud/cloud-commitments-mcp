@@ -1,7 +1,7 @@
 # GitHub Actions Workflows
 
 CI and release workflows for the cloud-commitments-mcp server. CI needs no cloud
-credentials; `snyk-scan` reads the `SNYK_TOKEN` secret.
+credentials.
 
 | Workflow | Trigger | Purpose |
 |----------|---------|---------|
@@ -15,12 +15,11 @@ credentials; `snyk-scan` reads the `SNYK_TOKEN` secret.
 Jobs: `lint` (golangci-lint, `go vet`, cyclomatic complexity), `workflow-lint` (actionlint,
 zizmor), `unit-tests` (coverage check, warns under 80%), `mcp-build` (builds
 `bin/cudly-mcp` on an OS matrix), `security-scan` (gitleaks, govulncheck, gosec,
-Trivy) and `snyk-scan`.
+and Trivy).
 
 The `ci-success` job aggregates `lint`, `workflow-lint`, `unit-tests`,
 `security-scan` and `mcp-build`. It fails unless each of them reports exactly `success`, so a
-skipped job cannot pass the gate. `snyk-scan` is not in that list. It skips fork PRs, and its
-step is `continue-on-error`. Use `ci-success` as the required status check.
+skipped job cannot pass the gate. Use `ci-success` as the required status check.
 
 ## pre-commit.yml
 
