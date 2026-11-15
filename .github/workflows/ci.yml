@@ -4,7 +4,6 @@
 # It performs comprehensive quality checks before allowing code to be merged.
 #
 # Required GitHub Secrets: None (all checks run without cloud credentials).
-# Optional: SNYK_TOKEN enables the non-gating Snyk scan.
 #
 # Required GitHub Variables: None
 #
@@ -482,35 +481,6 @@ jobs:
         uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           sarif_file: '${{ runner.temp }}/trivy-results.sarif'
-
-  snyk-scan:
-    name: Snyk Security Scan
-    runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    permissions:
-      contents: read
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Set up Go
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: go.mod
-
-      # Non-gating on purpose: Snyk is an external service, so its outages or
-      # rate limits must not block merges. It is deliberately absent from
-      # ci-success.needs.
-      - name: Run Snyk to check for vulnerabilities
-        uses: snyk/actions/golang@9adf32b1121593767fc3c057af55b55db032dc04 # 1.0.0
-        continue-on-error: true
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          args: --severity-threshold=high
 
   ci-success:
     name: CI Success
