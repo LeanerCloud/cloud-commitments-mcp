@@ -141,6 +141,17 @@ HTTPS origin, reads configuration per call, performs GETs only, and never writes
 a purchase audit record. Starting the server and listing its tools do not fetch
 Archera data. Listing never calls comparison or purchases automatically.
 
+`cudly_archera_recommendation_quote` quotes one stored AWS EC2 Instance Savings
+Plan recommendation from explicit identity inputs (source account, offering ID,
+plan type, region, instance family, term, payment, hourly commitment as a
+decimal string, recommendation UUID). Payment uses Archera spellings (`no_upfront`,
+`partial_upfront`, `all_upfront`) and term is `1yr` or `3yr`, unlike the search and
+purchase tools. It returns `quote` with exact decimal
+figures only when exactly one Archera line item matches every field exactly,
+and otherwise `unavailable`, `ambiguous` or `ineligible` with no figure. It uses
+the same operator environment, fixed origin and error handling as the other
+Archera tools, makes GET requests only and is not a bindable quote.
+
 The only arguments are `offset` (integer, default 0, nonnegative) and `limit`
 (integer, default 100, range 1..200; explicit zero is invalid). Every invocation
 fetches every vendor page before sorting UUIDs case-insensitively (raw ID breaks ties) and returning
