@@ -418,7 +418,7 @@ func ExecutePurchase(ctx context.Context, req PurchaseRequest) (*PurchaseRespons
 			OnDemandCost:      nonZeroCostPtr(rec.OnDemandCost),
 			EstimatedSavings:  nonZeroCostPtr(rec.EstimatedSavings),
 			SavingsPercentage: nonZeroCostPtr(rec.SavingsPercentage),
-			TermYears:         termYearsFromRecommendationTerm(rec.Term),
+			TermYears:         termYearsFromRecommendationTerm(string(rec.Term)),
 			OfferingClass:     req.OfferingClass,
 		}, nil
 	}
@@ -485,7 +485,7 @@ func purchaseResponse(rec common.Recommendation, result common.PurchaseResult) *
 		EstimatedSavings:  nonZeroCostPtr(rec.EstimatedSavings),
 		SavingsPercentage: nonZeroCostPtr(rec.SavingsPercentage),
 		EffectiveDate:     rfc3339OrNil(result.Timestamp),
-		TermYears:         termYearsFromRecommendationTerm(rec.Term),
+		TermYears:         termYearsFromRecommendationTerm(string(rec.Term)),
 	}
 	if result.Error != nil {
 		resp.Error = result.Error.Error()

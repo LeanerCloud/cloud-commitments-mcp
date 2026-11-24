@@ -30,7 +30,7 @@ func TestSavingsPlanRecommendationFromArgsAccountLevel(t *testing.T) {
 	assert.Equal(t, savingsPlansAccountLevelRegion, region, "account-level plan defaults to the shared query region")
 	assert.Equal(t, common.ServiceSavingsPlansCompute, rec.Service)
 	assert.Equal(t, common.CommitmentSavingsPlan, rec.CommitmentType)
-	assert.Equal(t, "3yr", rec.Term)
+	assert.Equal(t, common.Term("3yr"), rec.Term)
 	details, ok := rec.Details.(*common.SavingsPlanDetails)
 	require.True(t, ok)
 	assert.Equal(t, "Compute", details.PlanType)
@@ -347,7 +347,7 @@ func TestSavingsPlanRecommendationFromArgsDatabaseAllowedCombo(t *testing.T) {
 	rec, _, _, _, err := savingsPlanRecommendationFromArgs(args)
 	require.NoError(t, err)
 	assert.Equal(t, common.ServiceSavingsPlansDatabase, rec.Service)
-	assert.Equal(t, "1yr", rec.Term)
+	assert.Equal(t, common.Term("1yr"), rec.Term)
 }
 
 // TestSavingsPlanRecommendationFromArgsNonDatabaseUnaffected proves the
@@ -362,8 +362,8 @@ func TestSavingsPlanRecommendationFromArgsNonDatabaseUnaffected(t *testing.T) {
 
 	rec, _, _, _, err := savingsPlanRecommendationFromArgs(args)
 	require.NoError(t, err)
-	assert.Equal(t, "3yr", rec.Term)
-	assert.Equal(t, "all-upfront", rec.PaymentOption)
+	assert.Equal(t, common.Term("3yr"), rec.Term)
+	assert.Equal(t, common.PaymentOption("all-upfront"), rec.PaymentOption)
 }
 
 func TestAWSSavingsPlansPurchaseHandleConfirmFalseRefuses(t *testing.T) {

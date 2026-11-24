@@ -240,7 +240,7 @@ func dedupeSearchResults(ctx context.Context, prov provider.Provider, recs []com
 		if d.suppress {
 			out.Suppressed = append(out.Suppressed, suppressedRec{
 				Service: string(rec.Service), Region: rec.Region, ResourceType: rec.ResourceType, Account: rec.Account,
-				Term: rec.Term, Payment: rec.PaymentOption, Count: rec.Count, Reason: d.reason,
+				Term: string(rec.Term), Payment: string(rec.PaymentOption), Count: rec.Count, Reason: d.reason,
 			})
 			continue
 		}
@@ -403,7 +403,7 @@ func partitionVariants(ctx context.Context, accounts *accountResolver, recs []co
 				continue
 			}
 		}
-		k := variantKey{recs[i].Term, recs[i].PaymentOption}
+		k := variantKey{string(recs[i].Term), string(recs[i].PaymentOption)}
 		if _, ok := variants[k]; !ok {
 			order = append(order, k)
 		}

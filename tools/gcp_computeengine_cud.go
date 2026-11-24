@@ -152,7 +152,7 @@ func gcpComputeEngineRecommendationFromArgs(args gcpComputeEngineCUDPurchaseArgs
 		ResourceType:   machineType,
 		Count:          args.VCPUCount,
 		CommitmentType: common.CommitmentCUD,
-		Term:           term.RecommendationTerm(),
+		Term:           common.Term(term.RecommendationTerm()),
 		// GCP Compute Engine CUDs have exactly one billing schedule: monthly
 		// over the term, with no upfront option. There is therefore no
 		// payment_option argument on this tool, but PaymentOption is still

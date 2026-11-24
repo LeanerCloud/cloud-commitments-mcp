@@ -35,7 +35,7 @@ func TestGCPComputeEngineRecommendationFromArgs(t *testing.T) {
 	assert.Equal(t, common.CommitmentCUD, rec.CommitmentType)
 	assert.Equal(t, "n2-standard-4", rec.ResourceType)
 	assert.Equal(t, 4, rec.Count)
-	assert.Equal(t, "1yr", rec.Term)
+	assert.Equal(t, common.Term("1yr"), rec.Term)
 
 	// Details MUST be a value common.ComputeDetails, not a pointer:
 	// providers/gcp/services/computeengine/client.go's memoryMBFromDetails
@@ -170,7 +170,7 @@ func TestGCPComputeEngineRecommendationSetsMonthlyPaymentOption(t *testing.T) {
 	t.Parallel()
 	rec, _, _, _, err := gcpComputeEngineRecommendationFromArgs(validGCPCUDArgs())
 	require.NoError(t, err)
-	assert.Equal(t, "monthly", rec.PaymentOption,
+	assert.Equal(t, common.PaymentOption("monthly"), rec.PaymentOption,
 		"an empty payment option is read downstream as an upfront charge")
 }
 

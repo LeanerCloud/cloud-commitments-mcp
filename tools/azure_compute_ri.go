@@ -207,8 +207,8 @@ func azureComputeRecommendationFromArgs(args azureComputeRIPurchaseArgs) (rec co
 		ResourceType:   vmSize,
 		Count:          args.Count,
 		CommitmentType: common.CommitmentReservedInstance,
-		Term:           term.RecommendationTerm(),
-		PaymentOption:  string(paymentOption),
+		Term:           common.Term(term.RecommendationTerm()),
+		PaymentOption:  common.PaymentOption(paymentOption),
 	}
 
 	return rec, region, dryRun, confirm, nil

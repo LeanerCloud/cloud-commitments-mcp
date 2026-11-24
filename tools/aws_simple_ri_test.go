@@ -87,8 +87,8 @@ func TestSimpleAWSRIPurchaseRecommendationFromArgs(t *testing.T) {
 			assert.Equal(t, tool.spec.service, rec.Service)
 			assert.Equal(t, "r6g.large", rec.ResourceType)
 			assert.Equal(t, 2, rec.Count)
-			assert.Equal(t, "1yr", rec.Term)
-			assert.Equal(t, "all-upfront", rec.PaymentOption)
+			assert.Equal(t, common.Term("1yr"), rec.Term)
+			assert.Equal(t, common.PaymentOption("all-upfront"), rec.PaymentOption)
 			assert.Nil(t, rec.Details, "%s must not require service Details", product)
 		})
 	}

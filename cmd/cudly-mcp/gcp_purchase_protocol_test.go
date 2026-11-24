@@ -113,6 +113,8 @@ type pricedComputeEngineClient struct {
 	*computeengine.Client
 }
 
+var _ provider.OfferingPricer = (*pricedComputeEngineClient)(nil)
+
 func (c *pricedComputeEngineClient) GetOfferingDetails(_ context.Context, _ common.Recommendation) (*common.OfferingDetails, error) {
 	return &common.OfferingDetails{TotalCost: 1000, Currency: "USD"}, nil
 }

@@ -55,7 +55,7 @@ func applyApprovedFigures(rec *common.Recommendation, upfront *float64, currency
 		return err
 	}
 	supplied := upfront != nil || currency != ""
-	if !requiresApprovedUpfront(rec.PaymentOption) {
+	if !requiresApprovedUpfront(string(rec.PaymentOption)) {
 		if supplied {
 			return fmt.Errorf("approved_upfront and approved_currency apply only to %s and %s purchases; omit them for payment_option=%s",
 				PaymentOptionPartialUpfront, PaymentOptionAllUpfront, rec.PaymentOption)
@@ -84,7 +84,7 @@ func applyApprovedFigures(rec *common.Recommendation, upfront *float64, currency
 // still gets the error. A real purchase writes nothing here.
 func previewUpfrontQuote(ctx context.Context, req *PurchaseRequest, service string, price func(context.Context) (*common.OfferingDetails, error)) (*upfrontQuote, error) {
 	rec := req.Recommendation
-	if !req.DryRun || !requiresApprovedUpfront(rec.PaymentOption) {
+	if !req.DryRun || !requiresApprovedUpfront(string(rec.PaymentOption)) {
 		return nil, nil
 	}
 	od, err := price(ctx)

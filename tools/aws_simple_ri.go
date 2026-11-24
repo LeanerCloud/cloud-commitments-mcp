@@ -232,8 +232,8 @@ func (t *simpleAWSRIPurchaseTool) recommendationFromArgs(args simpleAWSRIPurchas
 		ResourceType:   resourceType,
 		Count:          args.Count,
 		CommitmentType: common.CommitmentReservedInstance,
-		Term:           term.RecommendationTerm(),
-		PaymentOption:  string(paymentOption),
+		Term:           common.Term(term.RecommendationTerm()),
+		PaymentOption:  common.PaymentOption(paymentOption),
 	}
 
 	dryRun, confirm = ResolveDryRunConfirm(args.DryRun, args.Confirm)

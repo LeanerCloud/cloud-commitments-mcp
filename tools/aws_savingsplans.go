@@ -230,8 +230,8 @@ func savingsPlanRecommendationFromArgs(args savingsPlansPurchaseArgs) (rec commo
 		Service:        service,
 		Region:         region,
 		CommitmentType: common.CommitmentSavingsPlan,
-		Term:           term.RecommendationTerm(),
-		PaymentOption:  string(paymentOption),
+		Term:           common.Term(term.RecommendationTerm()),
+		PaymentOption:  common.PaymentOption(paymentOption),
 		Details:        details,
 		// Total commitment over the term, computed locally (no provider call)
 		// with the 365-day year the savingsplans client also uses. Lets the

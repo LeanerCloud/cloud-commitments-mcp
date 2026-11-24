@@ -81,7 +81,7 @@ func savingsPlanUSD(rec common.Recommendation) (float64, error) {
 	if math.IsNaN(hourly) || math.IsInf(hourly, 0) || hourly <= 0 {
 		return 0, fmt.Errorf("refusing real purchase: cannot determine USD total: invalid hourly commitment %v", hourly)
 	}
-	years := termYearsFromRecommendationTerm(rec.Term)
+	years := termYearsFromRecommendationTerm(string(rec.Term))
 	if years != 1 && years != 3 {
 		return 0, fmt.Errorf("refusing real purchase: cannot determine USD total: unsupported savings plan term %q", rec.Term)
 	}

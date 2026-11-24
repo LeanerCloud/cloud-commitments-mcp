@@ -4,8 +4,8 @@ go 1.26.11
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.48.0
-	github.com/aws/aws-sdk-go-v2/config v1.33.16 // indirect
-	github.com/aws/aws-sdk-go-v2/service/costexplorer v1.74.8 // indirect
+	github.com/aws/aws-sdk-go-v2/config v1.33.21 // indirect
+	github.com/aws/aws-sdk-go-v2/service/costexplorer v1.74.9 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.349.0
 	github.com/aws/aws-sdk-go-v2/service/elasticache v1.66.0
 	github.com/aws/aws-sdk-go-v2/service/memorydb v1.43.0
@@ -29,19 +29,18 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/advisor/armadvisor v1.2.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v5 v5.7.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/consumption/armconsumption v1.2.0 // indirect
-	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/redis/armredis/v3 v3.3.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armsubscriptions v1.3.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/sql/armsql v1.2.0 // indirect
 	github.com/AzureAD/microsoft-authentication-library-for-go v1.10.1 // indirect
-	github.com/aws/aws-sdk-go-v2/credentials v1.20.16 // indirect
-	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.20.8 // indirect
+	github.com/aws/aws-sdk-go-v2/credentials v1.21.3 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.20.9 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.5.12 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.8.12 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.25 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.14.12 // indirect
 	github.com/aws/aws-sdk-go-v2/service/savingsplans v1.41.5
-	github.com/aws/aws-sdk-go-v2/service/sso v1.39.4 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.44.4 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.39.5 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.44.5 // indirect
 	github.com/aws/smithy-go v1.28.9
 	github.com/felixge/httpsnoop v1.1.0 // indirect
 	github.com/go-logr/logr v1.4.4 // indirect
@@ -73,47 +72,30 @@ require (
 )
 
 require (
-	github.com/LeanerCloud/cloud-commitments-go/pkg v0.0.0-20261112020821-41ffaff82fd4
-	github.com/LeanerCloud/cloud-commitments-go/providers/aws v0.0.0-20261112020821-41ffaff82fd4
-	github.com/LeanerCloud/cloud-commitments-go/providers/azure v0.0.0-20261112020821-41ffaff82fd4
-	github.com/LeanerCloud/cloud-commitments-go/providers/gcp v0.0.0-20261112020821-41ffaff82fd4
-	github.com/aws/aws-sdk-go-v2/service/sts v1.52.0
+	github.com/LeanerCloud/cloud-commitments-go/pkg v0.0.0-20261124144854-e0d8a7e75d85
+	github.com/LeanerCloud/cloud-commitments-go/providers/aws v0.0.0-20261124144854-e0d8a7e75d85
+	github.com/LeanerCloud/cloud-commitments-go/providers/azure v0.0.0-20261124144854-e0d8a7e75d85
+	github.com/LeanerCloud/cloud-commitments-go/providers/gcp v0.0.0-20261124144854-e0d8a7e75d85
+	github.com/aws/aws-sdk-go-v2/service/sts v1.53.0
 	github.com/google/jsonschema-go v0.4.3
 	github.com/google/uuid v1.6.0
 	github.com/modelcontextprotocol/go-sdk v1.8.0
 )
 
 require (
-	cel.dev/expr v0.25.3 // indirect
 	cloud.google.com/go/auth v0.24.1 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.3.1 // indirect
-	cloud.google.com/go/monitoring v1.30.0 // indirect
-	cloud.google.com/go/redis v1.29.0 // indirect
-	cloud.google.com/go/storage v1.70.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/billingbenefits/armbillingbenefits v1.0.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/cosmos/armcosmos/v2 v2.7.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/reservations/armreservations v1.1.0 // indirect
-	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/search/armsearch v1.4.0 // indirect
-	github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.35.0 // indirect
-	github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric v0.57.0 // indirect
-	github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapping v0.57.0 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/v4a v1.5.12 // indirect
-	github.com/aws/aws-sdk-go-v2/service/organizations v1.62.7 // indirect
-	github.com/aws/aws-sdk-go-v2/service/signin v1.12.4 // indirect
+	github.com/aws/aws-sdk-go-v2/service/organizations v1.63.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/signin v1.14.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/cncf/xds/go v0.0.0-20260202195803-dba9d589def2 // indirect
-	github.com/envoyproxy/go-control-plane/envoy v1.39.1-0.20260819172001-e6e3fd93e4be // indirect
-	github.com/envoyproxy/protoc-gen-validate v1.3.3 // indirect
-	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
-	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
 	github.com/segmentio/asm v1.1.3 // indirect
 	github.com/segmentio/encoding v0.5.4 // indirect
-	github.com/spiffe/go-spiffe/v2 v2.8.1 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
-	go.opentelemetry.io/contrib/detectors/gcp v1.45.0 // indirect
 	go.opentelemetry.io/otel/log v1.47.0 // indirect
-	go.opentelemetry.io/otel/sdk v1.47.0 // indirect
-	go.opentelemetry.io/otel/sdk/metric v1.47.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.6 // indirect
 )

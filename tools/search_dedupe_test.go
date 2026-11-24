@@ -90,7 +90,7 @@ func runDedupe(t *testing.T, p provider.Provider, recs []common.Recommendation) 
 func rdsRec(count int, term, payment, account string) common.Recommendation {
 	return common.Recommendation{
 		Provider: common.ProviderAWS, Service: common.ServiceRDS, Account: account, Region: "us-east-1",
-		ResourceType: "db.r6g.large", Count: count, Term: term, PaymentOption: payment, EstimatedSavings: 1234,
+		ResourceType: "db.r6g.large", Count: count, Term: common.Term(term), PaymentOption: common.PaymentOption(payment), EstimatedSavings: 1234,
 		Details: &common.DatabaseDetails{Engine: "MySQL", AZConfig: "multi-az"},
 	}
 }

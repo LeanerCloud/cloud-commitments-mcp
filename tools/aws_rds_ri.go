@@ -180,8 +180,8 @@ func rdsRecommendationFromArgs(args rdsRIPurchaseArgs) (rec common.Recommendatio
 		ResourceType:   instanceClass,
 		Count:          args.Count,
 		CommitmentType: common.CommitmentReservedInstance,
-		Term:           term.RecommendationTerm(),
-		PaymentOption:  string(paymentOption),
+		Term:           common.Term(term.RecommendationTerm()),
+		PaymentOption:  common.PaymentOption(paymentOption),
 		Details: &common.DatabaseDetails{
 			Engine:        engine,
 			AZConfig:      string(azConfig),

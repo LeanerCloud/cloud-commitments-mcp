@@ -409,3 +409,17 @@ func TestSearchAcceptsWhitespacePaddedService(t *testing.T) {
 	assert.Equal(t, common.ServiceEC2, recClient.lastParams.Service,
 		"service must be trimmed before it reaches the provider")
 }
+
+// Pins that only the canonical Savings Plans slugs get the required-field
+// defaulting; retired per-type spellings do not.
+func TestIsAWSSavingsPlansSearchCanonicalSlugsOnly(t *testing.T) {
+	t.Parallel()
+	for _, s := range common.SavingsPlansPlanTypes() {
+		assert.True(t, isAWSSavingsPlansSearch(common.ProviderAWS, string(s)), s)
+	}
+	assert.True(t, isAWSSavingsPlansSearch(common.ProviderAWS, string(common.ServiceSavingsPlansAll)))
+	for _, legacy := range []string{"savings-plans", "savingsplans-compute", "savingsplans-ec2instance"} {
+		assert.False(t, isAWSSavingsPlansSearch(common.ProviderAWS, legacy), legacy)
+	}
+	assert.False(t, isAWSSavingsPlansSearch(common.ProviderAzure, string(common.ServiceSavingsPlansCompute)))
+}
