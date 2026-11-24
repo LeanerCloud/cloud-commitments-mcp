@@ -43,6 +43,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 - `CUDLY_MCP_BUDGET_USD`: a cumulative per-process USD purchase budget. It
   is in memory (resets on restart, not shared, blind to purchases made
   elsewhere); unknown outcomes count as spent.
+- `cudly_archera_recommendation_quote`: a read-only Archera quote for one AWS
+  EC2 Instance Savings Plan recommendation from explicit identity inputs. A
+  figure is returned only for one exact line-item match (`quote`); otherwise
+  `unavailable`, `ambiguous` or `ineligible` with no figure. Exact decimal
+  text, unknown as null, fixed-text errors, no purchase.
 - `cudly_archera_comparison`: a read-only comparison of an Archera commitment
   plan (current offer and alternatives per line item, plus plan-wide
   hypotheticals), with exact decimal money, unknown as null, and both Archera

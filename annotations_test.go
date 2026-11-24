@@ -154,7 +154,7 @@ func TestToolAnnotationsValueAssertions(t *testing.T) {
 				assert.Truef(t, *d.Annotations.OpenWorldHint,
 					"tool %q is the search tool so must be OpenWorldHint=true: it reaches a live Cost Explorer/"+
 						"Advisor/Recommender API", d.Name)
-			case d.Action == "comparison" || d.Action == "line_items":
+			case d.Action == "comparison" || d.Action == "line_items" || d.Action == "recommendation_quote":
 				assert.Truef(t, d.Annotations.ReadOnlyHint, "tool %q is an Archera read-only tool so must be ReadOnlyHint=true", d.Name)
 				assert.Falsef(t, *d.Annotations.DestructiveHint, "tool %q must be DestructiveHint=false", d.Name)
 				assert.Falsef(t, d.Annotations.IdempotentHint, "tool %q must be IdempotentHint=false", d.Name)

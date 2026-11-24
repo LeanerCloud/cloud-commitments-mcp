@@ -113,6 +113,7 @@ type pricedComputeEngineClient struct {
 	*computeengine.Client
 }
 
+//nolint:unparam // satisfies provider.OfferingPricer, whose signature returns an error
 func (c *pricedComputeEngineClient) GetOfferingDetails(_ context.Context, _ common.Recommendation) (*common.OfferingDetails, error) {
 	return &common.OfferingDetails{TotalCost: 1000, Currency: "USD"}, nil
 }
