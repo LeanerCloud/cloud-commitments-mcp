@@ -138,8 +138,8 @@ func elasticacheRecommendationFromArgs(args elasticacheRIPurchaseArgs) (rec comm
 		ResourceType:   nodeType,
 		Count:          args.Count,
 		CommitmentType: common.CommitmentReservedInstance,
-		Term:           term.RecommendationTerm(),
-		PaymentOption:  string(paymentOption),
+		Term:           common.Term(term.RecommendationTerm()),
+		PaymentOption:  common.PaymentOption(paymentOption),
 		Details: &common.CacheDetails{
 			Engine:   string(engine),
 			NodeType: nodeType,

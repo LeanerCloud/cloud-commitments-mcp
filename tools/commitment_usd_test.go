@@ -32,7 +32,7 @@ func usdOffering(total float64) *common.OfferingDetails {
 func usdSPRec(term string, details common.ServiceDetails) common.Recommendation {
 	return common.Recommendation{
 		Provider: common.ProviderAWS, Service: common.ServiceSavingsPlansCompute,
-		CommitmentType: common.CommitmentSavingsPlan, Term: term, Count: 1, Details: details,
+		CommitmentType: common.CommitmentSavingsPlan, Term: common.Term(term), Count: 1, Details: details,
 	}
 }
 

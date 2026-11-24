@@ -194,7 +194,7 @@ func TestEC2UpfrontDryRunFailsWhenOfferingCannotBePriced(t *testing.T) {
 
 func TestEC2UpfrontQuoteFromOfferingRejectsUnusablePrices(t *testing.T) {
 	t.Parallel()
-	rec := common.Recommendation{Count: 2, PaymentOption: string(PaymentOptionAllUpfront)}
+	rec := common.Recommendation{Count: 2, PaymentOption: common.PaymentOption(PaymentOptionAllUpfront)}
 	for name, od := range map[string]*common.OfferingDetails{
 		"nil":      nil,
 		"zero":     {UpfrontCost: 0, Currency: "USD"},

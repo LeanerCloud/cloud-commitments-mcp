@@ -39,7 +39,7 @@ func TestAzureComputeRecommendationFromArgs(t *testing.T) {
 	assert.Equal(t, common.ServiceCompute, rec.Service)
 	assert.Equal(t, "Standard_D2s_v3", rec.ResourceType)
 	assert.Equal(t, 2, rec.Count)
-	assert.Equal(t, "3yr", rec.Term)
+	assert.Equal(t, common.Term("3yr"), rec.Term)
 	assert.Nil(t, rec.Details, "Azure VM purchase reads no Recommendation.Details")
 }
 
@@ -125,7 +125,7 @@ func TestAzureComputeRecommendationFromArgsAcceptsAllUpfront(t *testing.T) {
 	require.NoError(t, err)
 	assert.False(t, dryRun)
 	assert.True(t, confirm)
-	assert.Equal(t, "all-upfront", rec.PaymentOption)
+	assert.Equal(t, common.PaymentOption("all-upfront"), rec.PaymentOption)
 }
 
 // TestAzureComputeRecommendationFromArgsAcceptsNoUpfront proves the
@@ -141,7 +141,7 @@ func TestAzureComputeRecommendationFromArgsAcceptsNoUpfront(t *testing.T) {
 	require.NoError(t, err)
 	assert.False(t, dryRun)
 	assert.True(t, confirm)
-	assert.Equal(t, "no-upfront", rec.PaymentOption)
+	assert.Equal(t, common.PaymentOption("no-upfront"), rec.PaymentOption)
 }
 
 // TestAzureComputeRecommendationFromArgsDefaultsToNoUpfront proves omitting
@@ -154,7 +154,7 @@ func TestAzureComputeRecommendationFromArgsDefaultsToNoUpfront(t *testing.T) {
 	args.PaymentOption = ""
 	rec, _, _, _, err := azureComputeRecommendationFromArgs(args)
 	require.NoError(t, err)
-	assert.Equal(t, "no-upfront", rec.PaymentOption)
+	assert.Equal(t, common.PaymentOption("no-upfront"), rec.PaymentOption)
 }
 
 func TestAzureComputeRIPurchaseHandleConfirmFalseRefuses(t *testing.T) {
@@ -246,7 +246,7 @@ func TestAzureComputeRIPurchaseHandleRealPurchaseNoUpfront(t *testing.T) {
 	_, resp, err := tool.handle(context.Background(), nil, args)
 	require.NoError(t, err)
 	assert.True(t, resp.Success)
-	assert.Equal(t, "no-upfront", fake.purchaseResult.Recommendation.PaymentOption)
+	assert.Equal(t, common.PaymentOption("no-upfront"), fake.purchaseResult.Recommendation.PaymentOption)
 }
 
 // TestAzureComputeRIPurchaseHandleOmittedPaymentOptionDefaultsToNoUpfront
@@ -273,7 +273,7 @@ func TestAzureComputeRIPurchaseHandleOmittedPaymentOptionDefaultsToNoUpfront(t *
 	_, resp, err := tool.handle(context.Background(), nil, args)
 	require.NoError(t, err)
 	assert.True(t, resp.Success)
-	assert.Equal(t, "no-upfront", fake.purchaseResult.Recommendation.PaymentOption)
+	assert.Equal(t, common.PaymentOption("no-upfront"), fake.purchaseResult.Recommendation.PaymentOption)
 }
 
 func TestAzureComputeRIPurchaseHandleDryRunNeverCallsProvider(t *testing.T) {

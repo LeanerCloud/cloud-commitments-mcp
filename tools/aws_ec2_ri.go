@@ -231,8 +231,8 @@ func ec2RecommendationFromArgs(args ec2RIPurchaseArgs) (rec common.Recommendatio
 		ResourceType:   instanceType,
 		Count:          args.Count,
 		CommitmentType: common.CommitmentReservedInstance,
-		Term:           term.RecommendationTerm(),
-		PaymentOption:  string(paymentOption),
+		Term:           common.Term(term.RecommendationTerm()),
+		PaymentOption:  common.PaymentOption(paymentOption),
 		Details: &common.ComputeDetails{
 			InstanceType: instanceType,
 			Platform:     string(dims.platform),

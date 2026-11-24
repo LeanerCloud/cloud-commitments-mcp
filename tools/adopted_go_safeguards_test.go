@@ -157,7 +157,7 @@ func TestEC2OmittedTenancyAndScopeStillAcceptedByLibrary(t *testing.T) {
 	fake := &fakeEC2API{}
 	client := ec2.NewClient(aws.Config{Region: "us-east-1"})
 	client.SetEC2API(fake)
-	err = client.ValidateOffering(context.Background(), rec)
+	_, err = client.GetOfferingDetails(context.Background(), rec)
 	require.Error(t, err, "the empty fake lists no offerings")
 	assert.NotContains(t, err.Error(), "unsupported EC2 RI", "tenancy/scope must clear the library's parsing")
 	assert.Positive(t, fake.describeCalls, "the lookup must have reached the API")
